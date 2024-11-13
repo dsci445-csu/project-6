@@ -1,0 +1,112 @@
+---
+title: "PCR-Project"
+output: html_document
+date: "2024-11-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ISLR)
+library(tidyverse) 
+library(tidymodels)
+library(knitr)
+library(rpart.plot)
+library(caret)
+```
+
+```{r}
+drums <- read.csv("sample_features.csv") |>
+  drop_na() |>
+  mutate(label = as.factor(label))
+
+data_split <- initial_split(drums, 0.75)
+training_drums <- training(data_split)
+testing_drums <- testing(data_split)
+```
+
+```{r}
+tree_spec <- decision_tree() |>
+  set_engine('rpart') |>
+  set_mode("classification")
+
+tree_fit <- tree_spec |>
+  fit(label ~. , data = training_drums)
+
+```
+
+```{r}
+predictions <- tree_fit |>
+  predict(testing_drums) |>
+  pull(.pred_class)
+
+metrics <- metric_set(accuracy)
+model_performance <- testing_drums %>%
+ mutate(predictions = predictions) %>%
+ metrics(truth = label, estimate = predictions)
+
+print(model_performance)
+
+```
+```{r}
+comparison <- data.frame(Truth = testing_drums$label, Prediction = predictions)
+
+print(head(comparison,30))
+
+```
+
+```{r}
+confusionMatrix(testing_drums$label,predictions)
+
+
+```
+
+```{r}
+drums_noperc <- drums |>
+  filter(drums$label != 'perc')
+
+data_split <- initial_split(drums_noperc, 0.75)
+training_drums_noperc <- training(data_split)
+testing_drums_noperc <- testing(data_split)
+
+tree_spec <- decision_tree() |>
+  set_engine('rpart') |>
+  set_mode("classification")
+
+tree_fit <- tree_spec |>
+  fit(label ~. , data = training_drums_noperc)
+
+predictions <- tree_fit |>
+  predict(testing_drums_noperc) |>
+  pull(.pred_class)
+
+metrics <- metric_set(accuracy)
+model_performance <- testing_drums_noperc %>%
+ mutate(predictions = predictions) %>%
+ metrics(truth = label, estimate = predictions)
+
+
+confusionMatrix(testing_drums_noperc$label,predictions)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
