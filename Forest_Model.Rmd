@@ -1,5 +1,5 @@
 ---
-title: "PCR-Project"
+title: "Tree Model"
 output: html_document
 date: "2024-11-13"
 ---
@@ -8,7 +8,7 @@ date: "2024-11-13"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r, include = FALSE}
 library(ISLR)
 library(tidyverse) 
 library(tidymodels)
@@ -16,18 +16,43 @@ library(knitr)
 library(rpart.plot)
 library(caret)
 library(dplyr)
+library(dials)
 ```
+
+
+## Packages
+
+- ISLR
+- tidyverse
+- tidymodels
+- knitr
+- rpart.plot
+- caret
+- dplyr
+- dials
+
+
+
+## Read CSV File
 
 ```{r}
 drums <- read.csv("sample_features_balanced.csv") |>
   drop_na() |>
   mutate(label = as.factor(label)) 
 
-
-
-
-
 ```
+
+
+
+## Initial Tree Model
+
+The drums data set is split into 75% training data, and 25% testing data, stratified by the classification 'label'. A basic tree model is fit using the decision_tree() function with five terminal nodes.  
+
+The tree has four decisions: 
+- core frequency < 111
+- duration < 1.5
+- average activation < 0.0052
+- max amplitude < 0.57
 
 ```{r}
 set.seed(445)
@@ -43,6 +68,21 @@ tree_spec <- decision_tree() |>
 tree_fit <- tree_spec |>
   fit(label ~. , data = training_drums)
 
+tree_engine <- extract_fit_engine(tree_fit)
+rpart.plot(tree_engine, roundint =  FALSE)
+```
+
+## Predictions and Accuracy
+
+The initial model has a testing accuracy of 0.86 and correctly classifies:
+
+- 22/26 Hats
+- 25/26 Kicks
+- 25/26 Rides
+- 18/26 Snares
+
+```{r}
+set.seed(445)
 
 predictions <- tree_fit |>
   predict(testing_drums) |>
@@ -53,104 +93,114 @@ metrics <- metric_set(accuracy)
 model_performance <- testing_drums %>%
  mutate(predictions = predictions) %>%
  metrics(truth = label, estimate = predictions)
-
-
-model_performance$.estimate
 
 confmatrix <- confusionMatrix(testing_drums$label,predictions)
 confmatrix$table
 
-tree_engine <- extract_fit_engine(tree_fit)
-rpart.plot(tree_engine, roundint =  FALSE)
 
+model_performance$.estimate
 ```
 
+## Tuning Initial Tree Model
 
+We used 10-fold cross-validation to find the best cost_complexity parameter and tree depth. 
 
-
-
-
-
-
-
+- Best CC Paremeter: 0.01
+- Best tree depth: 5
 
 
 
 ```{r}
-tree_spec <- decision_tree(
-  cost_complexity = tune()) |>
-  set_engine('rpart') |>
+set.seed(445)
+
+tune_spec <- 
+  decision_tree(
+    cost_complexity = tune(),
+    tree_depth = tune()
+  ) %>% 
+  set_engine("rpart") %>% 
   set_mode("classification")
 
 
+tree_grid <- grid_regular(cost_complexity(),
+                          tree_depth(),
+                          levels = 10)
 
-# Define a grid for the cost_complexity parameter
-tree_grid <- grid_regular(cost_complexity(range = c(0.001, 0.1)), levels = 1)
-
-
-
-# Define a cross-validation strategy
 
 folds <- vfold_cv(training_drums, v = 10)
 
-# Perform cross-validation
-tree_tune <- tune_grid(
-  tree_spec,
-  label ~ .,
-  resamples = folds,
-  grid = tree_grid,
-  metrics = metric_set(accuracy)
-)
+tree_wf <- workflow() %>%
+  add_model(tune_spec) %>%
+  add_formula(label ~ .)
 
-# Collect the results
-best_tree <- tree_tune |> select_best(metric = "accuracy" )
-
-best_tree
-
-
-# Print the best tree complexity parameter
+tree_res <- tree_wf %>% 
+  tune_grid(resamples = folds,
+            grid = tree_grid)
 
 
 
+tree_res %>%
+  collect_metrics() %>%
+  dplyr::filter(.metric != "brier_class") %>%
+  dplyr::filter(.metric != "roc_auc") %>%
+  mutate(tree_depth = factor(tree_depth)) %>%
+  ggplot(aes(cost_complexity, mean, color = tree_depth)) +
+  geom_line(linewidth= 1.5, alpha = 0.6) +
+  geom_point(size = 2) +
+  facet_wrap(~ .metric, scales = "free", nrow = 2) +
+  scale_x_log10(labels = scales::label_number()) +
+  scale_color_viridis_d(option = "plasma", begin = .9, end = 0)
 
+
+
+best_tree <- tree_res %>%
+  select_best(metric="accuracy")
+
+tuned_cc <- best_tree$cost_complexity
+tuned_cc
+best_tree$tree_depth
 ```
 
+## Final Tree Model
+
+We refit the tree model using our tuned cost complexity parameter. With the new tuned paramter, we produce the exact same model and predictions as oour initial model. 
+
 ```{r}
-tree_spec <- decision_tree(cost_complexity = best_tree$cost_complexity) |>
+set.seed(445)
+
+tree_spec_tuned <- decision_tree(cost_complexity = tuned_cc) |>
   set_engine('rpart') |>
   set_mode("classification")
 
-tree_fit <- tree_spec |>
+tree_fit_tuned <- tree_spec_tuned |>
   fit(label ~. , data = training_drums)
 
-predictions <- tree_fit |>
+
+predictions_tuned <- tree_fit_tuned |>
   predict(testing_drums) |>
   pull(.pred_class)
 
-predictions
-```
+metrics_tuned <- metric_set(accuracy)
 
-```{r}
-metrics <- metric_set(accuracy)
-
-model_performance <- testing_drums %>%
- mutate(predictions = predictions) %>%
- metrics(truth = label, estimate = predictions)
-
-model_performance$.estimate
+model_performance_tuned <- testing_drums %>%
+ mutate(predictions = predictions_tuned) %>%
+ metrics_tuned(truth = label, estimate = predictions)
 
 
-confmatrix_optimal <- confusionMatrix(testing_drums$label,predictions)
-confmatrix_optimal$table
+model_performance_tuned$.estimate
 
-tree_engine <- extract_fit_engine(tree_fit)
-rpart.plot(tree_engine, roundint =  FALSE)
+confmatrix <- confusionMatrix(testing_drums$label,predictions_tuned)
+confmatrix$table
 
+tree_engine_tuned <- extract_fit_engine(tree_fit_tuned)
+rpart.plot(tree_engine_tuned, roundint =  FALSE)
 
 ```
 
+## Discussion
 
-```
+Although our model did not change at all after tuning the cost complexity parameter, we can explain this with our graph of the 10-fold cross validation step. We can see that changing the tree depth does almost nothing to change our accuracy for all trees with depth higher than 2. The cost complexity parameter has no effect on the accuracy until it has a value of 0.01 or higher, where there is a slight increase in accuracy. 
+
 
 
 
