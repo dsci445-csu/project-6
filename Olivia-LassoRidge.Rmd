@@ -1,0 +1,334 @@
+---
+title: "Group 6 Project"
+author: "Olivia Jones"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(445)
+
+```
+
+```{r, include=FALSE}
+library(tuneR)
+library(seewave)
+library(dplyr)
+library(ggplot2)
+library(glmnet)
+library(tidyverse)
+library(MASS)
+
+```
+
+```{r laod data}
+set.seed(445)
+main_dir <- "sample_features_balanced.csv" 
+
+#list of subdirectories and files
+subfolders <- list.dirs(main_dir, recursive = FALSE)
+
+#empty list
+audio_data <- list()
+
+for (subfolder in subfolders) {
+  label <- basename(subfolder)
+  files <- list.files(subfolder, pattern = "\\.wav$", full.names = TRUE)
+  for (file in files) {
+    audio <- readWave(file)
+    spec_data <- spectro(audio, f = audio@samp.rate, wl = 512, ovlp = 75, plot = FALSE)
+    spectrogram_matrix <- as.data.frame(spec_data$amp)
+    
+    audio_data[[length(audio_data) + 1]] <- list(
+      file = file,
+      label = label,
+      spectrogram = spectrogram_matrix
+    )
+  }
+}
+```
+
+```{r read in}
+#set.seed(445)
+sound_data <- read.csv("sample_features_balanced.csv")  
+head(sound_data)
+summary(sound_data)
+
+```
+
+```{r cross-validation}
+set.seed(445)
+audio_data <- read.csv("sample_features_balanced.csv")
+# Separate predictors and response variable
+X <- as.matrix(audio_data[ , -which(names(audio_data) == "label")]) # All columns except label
+Y <- audio_data$label
+
+# ridge regression (alpha = 0) for classification
+cv_ridge <- cv.glmnet(X, Y, alpha = 0, family = "multinomial")
+# lasso regression (alpha = 1) for classification
+cv_lasso <- cv.glmnet(X, Y, alpha = 1, family = "multinomial") #more than two categories: multinomial
+
+#cross-validation error for ridge and lasso classification
+plot(cv_ridge)
+title("Ridge Classification CV Error", line = 3)
+plot(cv_lasso)
+title("Lasso Classification CV Error", line = 3)
+
+```
+```{r accuracy attempt #1 echo = FALSE}
+
+set.seed(445)
+# training and testing sets
+train_indices <- sample(1:nrow(audio_data), size = 0.8 * nrow(audio_data))  # 80% training data
+train_data <- audio_data[train_indices, ]
+test_data <- audio_data[-train_indices, ]
+
+# separate predictors and response for training and testing
+X_train <- as.matrix(train_data[ , -which(names(train_data) == "label")])
+Y_train <- as.factor(train_data$label)
+
+X_test <- as.matrix(test_data[ , -which(names(test_data) == "label")])
+Y_test <- as.factor(test_data$label)
+
+#Train
+# Train Lasso regression (alpha = 1)
+cv_lasso <- cv.glmnet(X_train, Y_train, alpha = 1, family = "multinomial")
+# Train Ridge regression (alpha = 0)
+cv_ridge <- cv.glmnet(X_train, Y_train, alpha = 0, family = "multinomial")
+
+
+
+## Predict
+# Predict class labels using Lasso
+lasso_predictions <- predict(cv_lasso, X_test, type = "class", s = cv_lasso$lambda.min)
+# Predict class labels using Ridge
+ridge_predictions <- predict(cv_ridge, X_test, type = "class", s = cv_ridge$lambda.min)
+
+
+print(cv_lasso$lambda.min)
+print(cv_ridge$lambda.min)
+
+# Predict class labels using Lasso
+lasso_predictions <- predict(cv_lasso, X_test, type = "class", s = cv_lasso$lambda.min)
+# Predict class labels using Ridge
+ridge_predictions <- predict(cv_ridge, X_test, type = "class", s = cv_ridge$lambda.min)
+
+
+# accuracy for Lasso
+lasso_accuracy <- mean(lasso_predictions == Y_test)
+print(paste("Lasso Accuracy:", round(lasso_accuracy * 100, 2), "%"))
+# accuracy for Ridge
+ridge_accuracy <- mean(ridge_predictions == Y_test)
+print(paste("Ridge Accuracy:", round(ridge_accuracy * 100, 2), "%"))
+
+
+```
+
+```{r accuracy attempt #2 and confusion matrix echo = FALSE}
+set.seed(445)
+library(glmnet)
+library(caret)
+#library(ROSE)
+
+# Split the data into training and testing sets using stratified sampling
+set.seed(445)  # For reproducibility
+train_indices <- createDataPartition(audio_data$label, p = 0.8, list = FALSE)
+train_data <- audio_data[train_indices, ]
+test_data <- audio_data[-train_indices, ]
+
+# Separate predictors and response for training and testing
+X_train <- as.matrix(train_data[, -which(names(train_data) == "label")])
+Y_train <- as.factor(train_data$label)
+
+X_test <- as.matrix(test_data[, -which(names(test_data) == "label")])
+Y_test <- as.factor(test_data$label)
+
+# Standardize the predictors
+X_train_scaled <- scale(X_train)
+X_test_scaled <- scale(X_test)
+
+# Train Lasso regression (alpha = 1)
+cv_lasso <- cv.glmnet(X_train_scaled, Y_train, alpha = 1, family = "multinomial")
+
+# Train Ridge regression (alpha = 0)
+cv_ridge <- cv.glmnet(X_train_scaled, Y_train, alpha = 0, family = "multinomial")
+
+# Predict class labels using Lasso
+lasso_predictions <- predict(cv_lasso, X_test_scaled, type = "class", s = cv_lasso$lambda.min)
+
+# Predict class labels using Ridge
+ridge_predictions <- predict(cv_ridge, X_test_scaled, type = "class", s = cv_ridge$lambda.min)
+
+# Calculate accuracy for Lasso
+lasso_accuracy <- mean(lasso_predictions == Y_test)
+print(paste("Lasso Accuracy:", round(lasso_accuracy * 100, 2), "%"))
+
+# Calculate accuracy for Ridge
+ridge_accuracy <- mean(ridge_predictions == Y_test)
+print(paste("Ridge Accuracy:", round(ridge_accuracy * 100, 2), "%"))
+
+# Tune λ (Regularization Strength)
+# Lasso
+lasso_predictions_tuned <- predict(cv_lasso, X_test_scaled, type = "class", s = cv_lasso$lambda.min * 0.9)
+lasso_accuracy_tuned <- mean(lasso_predictions_tuned == Y_test)
+print(paste("Tuned Lasso Accuracy:", round(lasso_accuracy_tuned * 100, 2), "%"))
+
+# Ridge
+ridge_predictions_tuned <- predict(cv_ridge, X_test_scaled, type = "class", s = cv_ridge$lambda.min * 0.9)
+ridge_accuracy_tuned <- mean(ridge_predictions_tuned == Y_test)
+print(paste("Tuned Ridge Accuracy:", round(ridge_accuracy_tuned * 100, 2), "%"))
+
+# Elastic Net (alpha = 0.5)
+cv_elastic <- cv.glmnet(X_train_scaled, Y_train, alpha = 0.5, family = "multinomial")
+elastic_predictions <- predict(cv_elastic, X_test_scaled, type = "class", s = cv_elastic$lambda.min)
+elastic_accuracy <- mean(elastic_predictions == Y_test)
+print(paste("Elastic Net Accuracy:", round(elastic_accuracy * 100, 2), "%"))
+
+# confusion matrices
+print("Lasso Confusion Matrix:")
+print(table(Lasso_Predicted = lasso_predictions, True = Y_test))
+
+print("Ridge Confusion Matrix:")
+print(table(Ridge_Predicted = ridge_predictions, True = Y_test))
+
+print("Elastic Net Confusion Matrix:")
+print(table(Elastic_Predicted = elastic_predictions, True = Y_test))
+
+
+
+
+```
+```{r confusion matrix heatmap}
+set.seed(445)
+library(ggplot2)
+
+#confusion matrix for Lasso
+lasso_cm <- table(Lasso_Predicted = lasso_predictions, True = Y_test)
+
+# melt the confusion matrix
+lasso_cm_melted <- melt(lasso_cm)
+
+#  heatmap
+ggplot(data = lasso_cm_melted, aes(x = True, y = Lasso_Predicted, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  geom_text(aes(label = value), color = "black") +
+  labs(title = "Confusion Matrix for Lasso",
+       x = "True Label",
+       y = "Predicted Label",
+       fill = "Count") +
+  theme_minimal()
+
+
+
+
+```
+```{r Feature Importance Plot}
+set.seed(445)
+# coefficients for Lasso
+lasso_coefs <- coef(cv_lasso, s = cv_lasso$lambda.min)
+
+#coefficients to a tidy data frame
+lasso_coefs_list <- lapply(names(lasso_coefs), function(class_name) {
+  coefs_matrix <- as.matrix(lasso_coefs[[class_name]])
+  data.frame(
+    Feature = rownames(coefs_matrix),
+    Coefficient = as.vector(coefs_matrix),
+    Class = class_name
+  )
+})
+
+# combine the coefficients into a single data frame
+lasso_coefs_df <- do.call(rbind, lasso_coefs_list)
+
+# filter out zero coefficients
+lasso_coefs_df <- lasso_coefs_df[lasso_coefs_df$Coefficient != 0, ]
+
+library(ggplot2)
+ggplot(data = lasso_coefs_df, aes(x = reorder(Feature, abs(Coefficient)), y = Coefficient, fill = Class)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(
+    title = "Feature Importance (Lasso)",
+    x = "Features",
+    y = "Coefficient Value"
+  ) +
+  theme_minimal()
+
+```
+
+
+```{r Class-Wise Accuracy Bar Chart}
+set.seed(445)
+# per-class accuracy for Lasso
+lasso_cm <- table(Lasso_Predicted = lasso_predictions, True = Y_test)
+lasso_class_accuracy <- diag(lasso_cm) / colSums(lasso_cm)
+
+lasso_accuracy_df <- data.frame(Class = names(lasso_class_accuracy),
+                                Accuracy = lasso_class_accuracy)
+
+ggplot(data = lasso_accuracy_df, aes(x = Class, y = Accuracy)) +
+  geom_bar(stat = "identity", fill = "dodgerblue") +
+  geom_text(aes(label = round(Accuracy, 2)), vjust = -0.5) +
+  labs(title = "Per-Class Accuracy (Lasso)",
+       x = "Class",
+       y = "Accuracy") +
+  theme_minimal()
+
+```
+```{r Misclassification Trends (Bar Chart)}
+set.seed(445)
+# misclassifications for Lasso
+lasso_misclassified <- colSums(lasso_cm) - diag(lasso_cm)
+lasso_misclassified_df <- data.frame(Class = names(lasso_misclassified),
+                                     Misclassified = lasso_misclassified)
+
+ggplot(data = lasso_misclassified_df, aes(x = Class, y = Misclassified)) +
+  geom_bar(stat = "identity", fill = "firebrick") +
+  geom_text(aes(label = Misclassified), vjust = -0.5) +
+  labs(title = "Misclassifications Per Class (Lasso)",
+       x = "Class",
+       y = "Number of Misclassifications") +
+  theme_minimal()
+
+```
+```{r Comparison Across Models}
+set.seed(445)
+library(ggplot2)
+
+models <- c("Lasso", "Ridge", "Elastic Net")
+accuracies <- c(82.5, 80.0, 81.25)  # Replace with your actual accuracy values
+misclassifications <- c(12, 15, 13)  # Replace with your misclassification counts
+
+comparison_data <- data.frame(
+  Model = models,
+  Accuracy = accuracies,
+  Misclassifications = misclassifications
+)
+
+# accuracy Comparison
+ggplot(comparison_data, aes(x = Model, y = Accuracy, fill = Model)) +
+  geom_bar(stat = "identity", color = "black", show.legend = FALSE) +
+  scale_fill_manual(values = c("skyblue", "lightcoral", "lightgreen")) +
+  labs(
+    title = "Accuracy Comparison Across Models",
+    x = "Model",
+    y = "Accuracy (%)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 16, hjust = 0.5))
+
+# plot misclassification comparison
+ggplot(comparison_data, aes(x = Model, y = Misclassifications, fill = Model)) +
+  geom_bar(stat = "identity", color = "black", show.legend = FALSE) +
+  scale_fill_manual(values = c("skyblue", "lightcoral", "lightgreen")) +
+  labs(
+    title = "Misclassification Comparison Across Models",
+    x = "Model",
+    y = "Number of Misclassifications"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 16, hjust = 0.5))
+
+```
+
