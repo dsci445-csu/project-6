@@ -1,0 +1,42 @@
+---
+title: "Project_Paper_Group6"
+author: "Carlos Mabrey, Cody Farris, Olivia Jones, Aaron Eckhardt"
+output: pdf_document
+date: "2024-12-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+install.packages("reticulate")
+```
+
+```{r, include = FALSE}
+library(reticulate)
+reticulate::install_python(version="3.11.9")
+virtualenv_create("my-python",version="3.11.9")
+use_virtualenv("my-python", required = TRUE)
+
+virtualenv_install(envname = "my-python","numpy",
+                   ignore_installed = FALSE,pip_options = character())
+
+virtualenv_install(envname = "my-python","pandas",
+                   ignore_installed = FALSE,pip_options = character())
+
+virtualenv_install(envname = "my-python","matplotlib",
+                   ignore_installed = FALSE,pip_options = character())
+virtualenv_install(envname = "my-python","scikit-learn",
+                   ignore_installed = FALSE,pip_options = character())
+```
+
+```{python}
+import numpy as np
+import pandas as pd
+from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+```
