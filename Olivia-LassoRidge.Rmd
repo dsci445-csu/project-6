@@ -1,7 +1,9 @@
 ---
 title: "Group 6 Project"
 author: "Olivia Jones"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -56,6 +58,7 @@ summary(sound_data)
 
 ```
 
+
 ```{r cross-validation}
 set.seed(445)
 audio_data <- read.csv("sample_features_balanced.csv")
@@ -75,7 +78,28 @@ plot(cv_lasso)
 title("Lasso Classification CV Error", line = 3)
 
 ```
-```{r accuracy attempt #1 echo = FALSE}
+        
+* The graphs illustrate the cross-validation errors for Ridge and Lasso classification models 
+    across different values of the regularization parameter $\lambda$ which is plotted on a
+    logarithmic scale.
+* For Ridge regression, the multinomial deviance (error), decreases initially as $\lambda$
+    decreases, reaching a minimum value near $log(\lambda)=-2$. After this point, $\lambda$ 
+    continues to decrease and the error starts increasing due to over-fitting. This behavior 
+    reflects the balance between bias and variance, where smaller $\lambda$ values 
+    introduce higher variance in the model
+* For Lasso regression, the multinomial deviance is minimized around $log(\lambda)=-6$. 
+    However, as $\lambda$ decreases further, the error increases sharply, indicating that 
+    the model becomes too flexible and overfits the training data. The error for Lasso 
+    stays flat across a wide range of $\lambda$ values before reaching the optimal $\lambda$ 
+    indicates that Lasso is more robust to changes in $\lambda$ compared to Ridge.
+* The dotted vertical lines in both graphs indicate the optimal $\lambda$ values chosen 
+    through cross-validation represents the point where the error is minimized. These graphs
+    shows that the tuning of $\lambda$ achieves the best balance between underfitting and
+    overfitting for each regularization method.
+
+
+
+```{r accuracy attempt #1}
 
 set.seed(445)
 # training and testing sets
@@ -123,12 +147,21 @@ print(paste("Ridge Accuracy:", round(ridge_accuracy * 100, 2), "%"))
 
 
 ```
+* This is an accuracy approach that is basic and focuses only on raw accuracy. It doesn't 
+    provide any insights into where the models fail like class-wise performance or misclassifications.
+* The accuracy obtained here, 75.9% for Lasso and 78.31% for Ridge, is poor and doesn't 
+    grasp advanced tuning techniques or diagnostics.
+* The values 0.005166839 and 0.02822271 correspond to the lambda values (regularization parameters) 
+  chosen during cross-validation for the Lasso and Ridge models.
 
-```{r accuracy attempt #2 and confusion matrix echo = FALSE}
+
+
+
+
+```{r accuracy attempt #2}
 set.seed(445)
 library(glmnet)
 library(caret)
-#library(ROSE)
 
 # Split the data into training and testing sets using stratified sampling
 set.seed(445)  # For reproducibility
@@ -167,7 +200,7 @@ print(paste("Lasso Accuracy:", round(lasso_accuracy * 100, 2), "%"))
 ridge_accuracy <- mean(ridge_predictions == Y_test)
 print(paste("Ridge Accuracy:", round(ridge_accuracy * 100, 2), "%"))
 
-# Tune λ (Regularization Strength)
+# Tune (Regularization Strength)
 # Lasso
 lasso_predictions_tuned <- predict(cv_lasso, X_test_scaled, type = "class", s = cv_lasso$lambda.min * 0.9)
 lasso_accuracy_tuned <- mean(lasso_predictions_tuned == Y_test)
@@ -184,6 +217,21 @@ elastic_predictions <- predict(cv_elastic, X_test_scaled, type = "class", s = cv
 elastic_accuracy <- mean(elastic_predictions == Y_test)
 print(paste("Elastic Net Accuracy:", round(elastic_accuracy * 100, 2), "%"))
 
+
+```
+* The accuracy metrics give an overview of how well each model performs in classifying the
+  data. The Lasso regression model achieves an accuracy of 82.5%, which means that 82.5% of the
+  test samples were correctly classified. Ridge regression follows with an accuracy of 80%, 
+  showing slightly lower performance compared to Lasso, which may be due to Ridge's inability
+  to perform feature selection as effectively. After hyperparameter tuning, the accuracy for
+  both Lasso and Ridge models remains unchanged, suggesting that the models were already
+  performing optimally with the default parameters. The Elastic Net model, which combines 
+  Lasso and Ridge regularization effects, achieves an accuracy of 81.25%. This is slightly 
+  better than Ridge but not as strong as Lasso, meaning it's a balanced approach between 
+  the two methods.
+  
+
+```{r confusion matrix}
 # confusion matrices
 print("Lasso Confusion Matrix:")
 print(table(Lasso_Predicted = lasso_predictions, True = Y_test))
@@ -194,11 +242,34 @@ print(table(Ridge_Predicted = ridge_predictions, True = Y_test))
 print("Elastic Net Confusion Matrix:")
 print(table(Elastic_Predicted = elastic_predictions, True = Y_test))
 
-
-
-
 ```
-```{r confusion matrix heatmap}
+
+* The Lasso confusion matrix shows the model's ability to classify the test data into the four
+  categories: hat, kick, ride, and snare. It shows that Lasso correctly classified 18 "hat," 14 
+  "kick," 17 "ride," and 17 "snare" samples. However, there were some misclassifications, including 
+  three "ride" samples and two "snare" samples being incorrectly predicted as "hat." Although the
+  model performs well overall, these misclassifications express some difficulty in distinguishing
+  between certain categories.
+* The Ridge confusion matrix shows the classification outcomes for the Ridge regression model. 
+  It correctly identifies 18 "hat," 15 "kick," 16 "ride," and 15 "snare" samples. However, it 
+  shows slightly higher misclassifications compared to Lasso. It struggles more with 
+  distinguishing between "ride" and "snare," which has more confusion between these
+  categories. This could be due to Ridge’s tendency to keep all features in the model, even
+  the ones with weaker predictive power.
+* The Elastic Net confusion matrix provides a balance between Lasso and Ridge models, with 
+  correct classifications of 18 "hat," 14 "kick," 17 "ride," and 16 "snare" samples. The 
+  misclassification patterns are similar to those in Lasso, but with slight differences
+  in how the errors are distributed. Elastic Net achieves better balance by incorporating
+  both Lasso’s feature selection and Ridge’s regularization, leading to moderate performance 
+  across all categories.
+  
+  
+
+
+```{r confusion_matrix_heatmap, fig.align='center'}
+#install.packages("reshape2")
+library(reshape2)
+
 set.seed(445)
 library(ggplot2)
 
@@ -223,7 +294,19 @@ ggplot(data = lasso_cm_melted, aes(x = True, y = Lasso_Predicted, fill = value))
 
 
 ```
-```{r Feature Importance Plot}
+* The confusion heatmap for the Lasso model represents the model’s classification 
+  performance by comparing the predicted labels to true labels, with darker blue cells as
+  higher counts. The diagonal cells show correctly classified samples, with 18 "hat", 14
+  "kick", 17 "ride", and 17 "snare" samples accurately predicted. Off-diagonal cells are
+  misclassifications, such as 3 "ride" samples misclassified as "hat", 2 "snare" samples 
+  misclassified as "hat", 1 "snare" misclassified as "kick," and 2 "ride" misclassified as
+  "snare." Although the Lasso model shows strong overall performance, as indicated by most
+   counts along the diagonal, misclassifications occur more frequently in the "snare" and "ride" 
+   categories, showing confusion with other classes. The "kick" category performs the best with 
+   the fewest misclassifications. 
+
+
+```{r Feature_Importance_Plot, fig.align='center'}
 set.seed(445)
 # coefficients for Lasso
 lasso_coefs <- coef(cv_lasso, s = cv_lasso$lambda.min)
@@ -256,9 +339,20 @@ ggplot(data = lasso_coefs_df, aes(x = reorder(Feature, abs(Coefficient)), y = Co
   theme_minimal()
 
 ```
+* The feature core_frequency stands out as the most influential feature across all classes, 
+  with the largest positive and negative coefficients, specifically for the "kick" and "ride" 
+  classes. This suggests that variations in core_frequency strongly differentiate these drum 
+  types. The average_activation feature also plays a significant role, especially for "snare" 
+  and "hat," where it has notable positive and negative contributions. The intercept term 
+  represents the baseline bias of the model, and its magnitude shows the overall adjustment
+  the model makes for each class.
+* Features like duration and max_amplitude have smaller coefficient values, meaning that 
+  they contribute less to the classification decisions for most drum types. However, duration 
+  is slightly more significant for distinguishing "ride" and "hat." The negative and positive 
+  signs of the coefficients show whether the feature increases or decreases the likelihood 
+  of a particular class being predicted.
 
-
-```{r Class-Wise Accuracy Bar Chart}
+```{r Class-Wise_Accuracy_Bar_Chart, fig.align='center'}
 set.seed(445)
 # per-class accuracy for Lasso
 lasso_cm <- table(Lasso_Predicted = lasso_predictions, True = Y_test)
@@ -276,7 +370,17 @@ ggplot(data = lasso_accuracy_df, aes(x = Class, y = Accuracy)) +
   theme_minimal()
 
 ```
-```{r Misclassification Trends (Bar Chart)}
+
+* The "hat" class achieves the highest accuracy, with a value of 0.9, indicating that 90% 
+  of "hat" samples were correctly classified. The "kick" class has the lowest accuracy, at
+  0.7, showing that only 70% of "kick" samples were accurately predicted. Both the "ride"
+  and "snare" classes share the same accuracy, at 0.85, meaning the model correctly predicted 
+  85% of the samples for these classes.
+
+
+
+
+```{r Misclassification_Trends_(Bar_Chart), fig.align='center'}
 set.seed(445)
 # misclassifications for Lasso
 lasso_misclassified <- colSums(lasso_cm) - diag(lasso_cm)
@@ -292,7 +396,19 @@ ggplot(data = lasso_misclassified_df, aes(x = Class, y = Misclassified)) +
   theme_minimal()
 
 ```
-```{r Comparison Across Models}
+* The "kick" class shows the highest number of misclassifications, with six instances 
+  where the model incorrectly identified the drum type. Both the "ride" and "snare"
+  classes have three misclassifications each, indicating a moderate level of error.
+  The "hat" class has the lowest number of misclassifications, with only two errors, 
+  suggesting the model is better at accurately predicting this class compared to others.
+
+* This chart emphasizes the model's struggles with distinguishing the "kick" class, which 
+  could indicate overlap in feature space or insufficient representation of distinguishing
+  features for this class. 
+
+
+
+```{r Comparison_Across_Models, fig.align='center'}
 set.seed(445)
 library(ggplot2)
 
@@ -331,4 +447,17 @@ ggplot(comparison_data, aes(x = Model, y = Misclassifications, fill = Model)) +
   theme(plot.title = element_text(size = 16, hjust = 0.5))
 
 ```
+* The Accuracy Comparison Across Models bar chart presents the accuracy percentages for three
+  different regression models. The chart shows similar performance across the models, with 
+  Elastic Net achieving an accuracy of approximately 81.25%, Lasso at 82.5%, and Ridge slightly 
+  lower at 80%. This indicates that all three models are effective, with minor differences in 
+  their ability to classify data correctly. Lasso appears to perform marginally better, 
+  meaning its effectiveness in this dataset and problem context, due to its feature selection
+  properties.
 
+* The Misclassification Comparison Across Models bar chart shows the number of misclassified 
+  data points for Elastic Net, Lasso, and Ridge models. The Elastic Net and Lasso models both show
+  lower misclassifications compared to Ridge, with 15, 14, and 16 misclassifications. This shows
+  the edge of Elastic Net and Lasso when balancing prediction accuracy and model simplicity. Ridge's
+  slightly higher misclassification count indicates a less optimal balance of complexity and 
+  performance for this dataset.
