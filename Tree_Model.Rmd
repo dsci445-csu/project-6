@@ -9,6 +9,20 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r, include = FALSE}
+install.packages('ISLR')
+install.packages('tidyverse')
+install.packages('tidymodels')
+install.packages('knitr')
+install.packages('rpart.plot')
+install.packages('caret')
+install.packages('dplyr')
+install.packages('dials')
+
+
+```
+
+
+```{r, include = FALSE}
 library(ISLR)
 library(tidyverse) 
 library(tidymodels)
