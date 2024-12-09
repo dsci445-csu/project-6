@@ -12,10 +12,10 @@ This project explores machine learning techniques for classifying drum audio sam
 
 To ensure reproducibility, create a virtual environment using conda with the requirements specified in the `requirements.txt` file.
 
-```bash
-conda create --name drum_classifier --file requirements.txt
+
+conda env create -f environment.yml
 conda activate drum_classifier
-```
+
 
 ### 2. Install Additional Packages
 
