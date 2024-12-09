@@ -42,7 +42,6 @@ def create_plots(audio, time, frequency, activation, confidence):
 
     # Improve layout
     plt.tight_layout()
-    plt.savefig('plots/transparent/all_plots_grid.png', transparent=True)
     plt.show()
 
 
