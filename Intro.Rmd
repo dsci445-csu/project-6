@@ -1,0 +1,169 @@
+---
+title: "Introduction"
+output: html_document
+---
+
+Load data 
+
+```{r}
+library(readr)
+library(ggplot2)
+
+
+bank_full <- read_delim("bank-full.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+head(bank_full)
+```
+
+The data set consists of 16 variables describing the customer and marketing campaign along with temporal aspects:
+* age: Age in years 
+* job: Occupation (qualitative variable)
+* marital: Marital status ( qualitative variable)
+* education: Highest level of education (qualitative variable)
+* default: has credit in default? (binary)
+* balance: average yearly balance
+* housing: has housing loan? (binary)
+* loan: has personal loan? (binary)
+* Contract: contact communication type (qualitative)
+* day: last contact day of the week (month)
+* month: last contact month of year
+* duration: last contact duration, in seconds
+* campaign: number of contacts performed during this campaign and for this client
+* pdays: number of days that passed by after the client was last contacted from a previous campaign (-1 means client was not previously contacted)
+* previous: number of contacts performed before this campaign and for this client
+* poutcome: outcome of the previous marketing campaign (qualitative)
+* y: Indicator of whether the client subscribed a term deposit (Binary target) 
+
+
+
+## Distribution
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+bank_long <- bank_full %>%
+  select(where(is.numeric)) %>% # numeric columns
+  pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
+
+ggplot(bank_long, aes(x = value)) +
+  geom_histogram(bins = 30, fill = "darkblue", color = "white", alpha = 0.7) +
+  facet_wrap(~ variable, scales = "free", ncol = 4) + 
+  labs(
+    title = "Distribution of Numeric Variables in bank_full Dataset",
+    x = "Value",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+```
+
+From the plots one can observe that the numeric variables are heavily skewed (balance, campaign, duration, pdays, previous). The dissemblance of the observations should take into account when considering the bias in our model fit.
+
+
+
+```{r}
+summary(bank_full)
+```
+
+The categorical variables need to be set to categorical (or binary) variables, since R is reading the data as mere strings.
+
+```{r}
+bank_full$job <- as.factor(bank_full$job)
+bank_full$marital <- as.factor(bank_full$marital)
+bank_full$education <- as.factor(bank_full$education)
+bank_full$contact <- as.factor(bank_full$contact)
+bank_full$poutcome <- as.factor(bank_full$poutcome)
+bank_full$day <- as.factor(bank_full$day)
+bank_full$month <- as.factor(bank_full$month)
+
+bank_full$default <- ifelse(bank_full$default == "yes", 1, 0)
+bank_full$housing <- ifelse(bank_full$housing == "yes", 1, 0)
+bank_full$loan <- ifelse(bank_full$loan == "yes", 1, 0)
+
+```
+
+
+Plots for categorical variables
+
+```{r}
+
+```
+
+
+## We plan to use the k-fold cross validation approach. 
+For consideration: Are we able to make our training sets a sort of proper stratification of our population dataset (Imbalance in amounts of customers subscribed).
+
+```{r}
+bank_train <- 
+bank_test <- 
+```
+
+
+Model set up...
+
+## Lgoistic Regression
+
+```{r}
+library(glmnet)
+library(ggplot2)
+
+
+bank_glm <- glm(y ~., data = bank_train, family = binomial)
+summary(bank_glm)
+```
+
+estimate test error
+
+## LDA and QDA
+
+```{r}
+library(MASS)
+
+bank_lda <- lda(y ~., data = bank_full, subset = train)
+bank_lda
+
+bank_qda <- qda(y ~., data = bank_full, subset = train)
+```
+
+estimate test error
+
+## KNN
+
+```{r}
+library(class)
+
+bank_knn <- knn()
+```
+
+estimate test error
+
+Optimize K value (w.r.t cross validation tesst error)
+
+
+## GAM
+
+```{r}
+library(gam)
+bank_gam <- gam(y ~ , data = bank_train) # basis functions
+
+
+```
+
+## Boosting Decision Trees
+require post-hoc explanation
+
+```{r}
+
+```
+
+
+Potential model Mixed effects model (attribute set variables to have a random effect)
+
+
+
+
+
+
+
+
+

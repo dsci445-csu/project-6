@@ -1,6 +1,8 @@
 ---
 title: "draft_group-6"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 *Paper (40%)* A paper detailing the motivation, methodology, and results of your project, complete with references. (https://dsci445-csu.github.io/project/)
@@ -10,7 +12,7 @@ output: pdf_document
 # Outline
 
 ## motivation
-(10% of the content)\
+(13% of the content)\
 The Bank Marketing dataset contains information collected from a Portuguese banking institution during multiple direct telemarketing campaigns (source1). *Why??* (We want to justify the efforts of modeling this data)
 
 **Description of dataset** \
@@ -27,9 +29,13 @@ We would like to maintain interpretability in our model. Emphasis is predicated 
 (60%)
 
 - Data wrangling/cleaning
-- For each model (Logistic, LDA, QDA, KNN, Boosting )
+- For each model (Logistic, LDA, QDA, KNN, GAM, Boosting)
   - Model Formulation (training data, with k-fold CV)
   - Feature Selection and model tuning (subset, regularization, dimension reduction)
+
+
+
+
 
 ## results
 (25%)
@@ -38,4 +44,4 @@ We would like to maintain interpretability in our model. Emphasis is predicated 
 - Discussion (make inferrences, determine the favored model)
 
 ## references
-(5%)
+(2%)
