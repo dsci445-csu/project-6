@@ -57,6 +57,7 @@ ggplot(bank_long, aes(x = value)) +
 
 ```
 
+
 From the plots one can observe that the numeric variables are heavily skewed (balance, campaign, duration, pdays, previous). The dissemblance of the observations should take into account when considering the bias in our model fit.
 
 
@@ -128,6 +129,7 @@ bank_qda <- qda(y ~., data = bank_full, subset = train)
 estimate test error
 
 ## KNN
+Interpretable in a different way... Can be used to identify customers similar to those that are subscirbed.
 
 ```{r}
 library(class)
@@ -137,7 +139,7 @@ bank_knn <- knn()
 
 estimate test error
 
-Optimize K value (w.r.t cross validation tesst error)
+Optimize K value (w.r.t cross validation test error)
 
 
 ## GAM
