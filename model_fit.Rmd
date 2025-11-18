@@ -1,0 +1,85 @@
+---
+title: "model_fit"
+output: html_document
+---
+
+load clean data
+
+```{r}
+
+```
+
+
+## We plan to use the k-fold cross validation approach. 
+For consideration: Are we able to make our training sets a sort of proper stratification of our population dataset (Imbalance in amounts of customers subscribed).
+
+```{r}
+bank_train <- 
+bank_test <- 
+```
+
+
+
+## Lgoistic Regression
+
+```{r}
+library(glmnet)
+library(ggplot2)
+
+
+bank_glm <- glm(y ~., data = bank_train, family = binomial)
+summary(bank_glm)
+```
+
+estimate test error
+
+## LDA and QDA
+
+```{r}
+library(MASS)
+
+bank_lda <- lda(y ~., data = bank_full, subset = train)
+bank_lda
+
+bank_qda <- qda(y ~., data = bank_full, subset = train)
+```
+
+estimate test error
+
+## KNN
+Interpretable in a different way... Can be used to identify customers similar to those that are subscirbed.
+
+```{r}
+library(class)
+
+bank_knn <- knn()
+```
+
+estimate test error
+
+Optimize K value (w.r.t cross validation test error)
+
+
+## GAM
+
+```{r}
+library(gam)
+bank_gam <- gam(y ~ , data = bank_train) # basis functions
+
+
+```
+
+## Boosting Decision Trees
+require post-hoc explanation
+
+```{r}
+
+```
+
+
+Potential model Mixed effects model (attribute set variables to have a random effect)
+
+
+
+
+
