@@ -275,7 +275,51 @@ library(MASS)
 #bank_lda
 
 #bank_qda <- qda(y ~., data = bank_full, subset = train)
+
+set.seed(123)
+train_index <- sample(seq_len(nrow(bank_full)), size = 0.8 * nrow(bank_full))
+bank_train <- bank_full[train_index, ]
+bank_test <- bank_full[-train_index, ]
 ```
+
+```{r}
+lda_model <- lda(y ~ ., data = bank_train)
+lda_model
+```
+
+```{r}
+lda_pred <- predict(lda_model, newdata = bank_test)$class
+lda_actual <- bank_test$y
+```
+
+```{r}
+lda_accuracy <- mean(lda_pred == lda_actual)
+lda_error <- 1 - lda_accuracy
+cat("LDA Test Accuracy:", round(lda_accuracy * 100, 2), "%\n")
+cat("LDA Test Error:", round(lda_error * 100, 2), "%\n")
+```
+
+
+
+```{r}
+qda_model <- qda(y ~ ., data = bank_train)
+qda_model
+```
+
+```{r}
+qda_pred <- predict(qda_model, newdata = bank_test)$class
+qda_actual <- bank_test$y
+```
+
+```{r}
+qda_accuracy <- mean(qda_pred == qda_actual)
+qda_error <- 1 - qda_accuracy
+cat("QDA Test Accuracy:", round(qda_accuracy * 100, 2), "%\n")
+cat("QDA Test Error:", round(qda_error * 100, 2), "%\n")
+```
+
+
+
 
 estimate test error
 
@@ -288,6 +332,91 @@ library(class)
 #bank_knn <- knn()
 ```
 
+```{r}
+numeric_vars <- bank_full %>%
+select(-y) %>%
+select(where(is.numeric)) %>%
+names()
+train_x <- bank_train[, numeric_vars]
+test_x <- bank_test[, numeric_vars]
+```
+
+```{r}
+train_x_scaled <- scale(train_x)
+test_x_scaled <- scale(
+  test_x,
+  center = attr(train_x_scaled, "scaled:center"),
+  scale  = attr(train_x_scaled, "scaled:scale")
+)
+train_y <- bank_train$y
+test_y  <- bank_test$y
+```
+
+```{r}
+knn_pred <- knn(train = train_x_scaled,
+test = test_x_scaled,
+cl = train_y,
+k = 5)
+```
+
+```{r}
+knn_accuracy <- mean(knn_pred == test_y)
+knn_error <- 1 - knn_accuracy
+cat("KNN Test Accuracy:", round(knn_accuracy * 100, 2), "%\n")
+cat("KNN Test Error:", round(knn_error * 100, 2), "%\n")
+```
+
+```{r}
+k_values <- 1:25
+cv_accuracy <- numeric(length(k_values))
+folds <- createFolds(train_y, k = 5)
+for (i in seq_along(k_values)) {
+k <- k_values[i]
+fold_acc <- c()
+for (f in folds) {
+fold_train_x <- train_x_scaled[-f, ]
+fold_test_x <- train_x_scaled[f, ]
+fold_train_y <- train_y[-f]
+fold_test_y <- train_y[f]
+pred <- knn(
+  train = fold_train_x,
+  test  = fold_test_x,
+  cl    = fold_train_y,
+  k     = k
+)
+
+fold_acc <- c(fold_acc, mean(pred == fold_test_y))
+}
+cv_accuracy[i] <- mean(fold_acc)
+}
+best_k <- k_values[which.max(cv_accuracy)]
+best_k
+```
+
+```{r}
+plot(k_values, cv_accuracy, type = "b",
+xlab = "K Value", ylab = "Cross-Validated Accuracy",
+main = "K Optimization for KNN")
+abline(v = best_k, col = "red", lty = 2)
+```
+
+```{r}
+knn_best_pred <- knn(
+train = train_x_scaled,
+test = test_x_scaled,
+cl = train_y,
+k = best_k
+)
+final_accuracy <- mean(knn_best_pred == test_y)
+final_error <- 1 - final_accuracy
+cat("Best K:", best_k, "\n")
+cat("Test Accuracy with Best K:", round(final_accuracy * 100, 2), "%\n")
+cat("Test Error with Best K:", round(final_error * 100, 2), "%\n")
+```
+
+
+
+
 estimate test error
 
 Optimize K value (w.r.t cross validation test error)
@@ -298,20 +427,70 @@ Optimize K value (w.r.t cross validation test error)
 ```{r}
 library(gam)
 #bank_gam <- gam(y ~ , data = bank_train) # basis functions
-
-
 ```
+
+```{r}
+gam_model <- gam(
+y ~ s(age) + s(balance) + s(duration) + s(campaign) + s(pdays),
+family = binomial,
+data = bank_train
+)
+summary(gam_model)
+```
+
+```{r}
+gam_prob <- predict(gam_model, newdata = bank_test, type = "response")
+gam_pred <- ifelse(gam_prob > 0.5, "yes", "no")
+gam_pred <- as.factor(gam_pred)
+```
+
+```{r}
+actual <- bank_test$y
+gam_accuracy <- mean(gam_pred == actual)
+gam_error <- 1 - gam_accuracy
+cat("GAM Test Accuracy:", round(gam_accuracy * 100, 2), "%\n")
+cat("GAM Test Error:", round(gam_error * 100, 2), "%\n")
+```
+
+
 
 ## Boosting Decision Trees
 require post-hoc explanation
-
 ```{r}
-
+library(gbm)
+```
+```{r}
+bank_train$y_num <- ifelse(bank_train$y == "yes", 1, 0)
+bank_test$y_num <- ifelse(bank_test$y == "yes", 1, 0)
+set.seed(123)
+boost_model <- gbm(
+formula = y_num ~ . - y,
+data = bank_train,
+distribution = "bernoulli",
+n.trees = 1000,
+interaction.depth = 3,
+shrinkage = 0.01,
+n.minobsinnode = 10,
+verbose = FALSE
+)
 ```
 
+```{r}
+boost_prob <- predict(boost_model, newdata = bank_test, n.trees = 1000, type = "response")
+boost_pred <- ifelse(boost_prob > 0.5, "yes", "no")
+```
 
+```{r}
+boost_accuracy <- mean(boost_pred == bank_test$y)
+boost_error <- 1 - boost_accuracy
+cat("Boosting Test Accuracy:", round(boost_accuracy * 100, 2), "%\n")
+cat("Boosting Test Error:", round(boost_error * 100, 2), "%\n")
+summary(boost_model)
+```
+Post-hoc explanation: Boosting combines the small decision trees to not make the same mistake the previous one has made. Which creates a very good and accurate model. 
+
+Ω
 Potential model Mixed effects model (attribute set variables to have a random effect)
-
 
 
 
