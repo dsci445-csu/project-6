@@ -185,6 +185,22 @@ Plots for categorical variables
 
 ```{r}
 
+cat_vars <- c("job", "marital", "education", "contact", "month", "poutcome")
+
+for (var in cat_vars) {
+p <- ggplot(bank_full, aes_string(x = var, fill = "y")) +
+geom_bar(position = "fill") +
+coord_flip() +
+labs(
+title = paste("Proportion of Subscription by", var),
+x = var,
+y = "Proportion"
+) +
+theme_minimal()
+
+print(p) 
+}
+
 ```
 
 
@@ -194,6 +210,34 @@ For consideration: Are we able to make our training sets a sort of proper strati
 ```{r}
 #bank_train <- 
 #bank_test <- 
+library(caret)
+
+kfold_cv_model <- function(data, target_col, model_func, k = 5, seed = 123, ...) {
+set.seed(seed)
+
+folds <- createFolds(data[[target_col]], k = k, list = TRUE, returnTrain = TRUE)
+
+accuracy_list <- numeric(k)
+
+for (i in 1:k) {
+train_idx <- folds[[i]]
+train_data <- data[train_idx, ]
+test_data  <- data[-train_idx, ]
+model <- model_func(train_data, ...)
+
+pred_probs <- predict(model, newdata = test_data, type = "response")
+
+if (is.numeric(pred_probs)) {
+  pred <- ifelse(pred_probs > 0.5, "yes", "no")
+} else {
+  pred <- pred_probs
+}
+actual <- test_data[[target_col]]
+accuracy_list[i] <- mean(pred == actual)
+}
+mean_accuracy <- mean(accuracy_list)
+return(mean_accuracy)
+}
 ```
 
 
@@ -208,6 +252,16 @@ library(ggplot2)
 
 #bank_glm <- glm(y ~., data = bank_train, family = binomial)
 #summary(bank_glm)
+
+logistic_model <- function(train_data, ...) {
+glm(y ~ ., data = train_data, family = binomial)
+}
+
+accuracy_logit <- kfold_cv_model(bank_full, "y", logistic_model, k = 5)
+accuracy_logit
+
+cat("Logistic Regression 5-Fold CV Accuracy:", round(accuracy_logit * 100, 2), "%\n")
+
 ```
 
 estimate test error
