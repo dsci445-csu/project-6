@@ -36,12 +36,3 @@ We would like to maintain interpretability in our model. Emphasis is predicated 
 
 
 
-
-## results
-(25%)
-
-- Model comparison and assessment (Test error, confusion matrix, AUC, BIC, etc.)
-- Discussion (make inferrences, determine the favored model)
-
-## references
-(2%)
