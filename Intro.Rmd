@@ -1,0 +1,501 @@
+---
+title: "Introduction"
+output: html_document
+---
+
+Load data 
+
+```{r}
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+
+bank_full <- read_delim("bank-full.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+head(bank_full)
+```
+
+The data set consists of 16 variables describing the customer and marketing campaign along with temporal aspects:
+* age: Age in years 
+* job: Occupation (qualitative variable)
+* marital: Marital status ( qualitative variable)
+* education: Highest level of education (qualitative variable)
+* default: has credit in default? (binary)
+* balance: average yearly balance
+* housing: has housing loan? (binary)
+* loan: has personal loan? (binary)
+* Contract: contact communication type (qualitative)
+* day: last contact day of the week (month)
+* month: last contact month of year
+* duration: last contact duration, in seconds
+* campaign: number of contacts performed during this campaign and for this client
+* pdays: number of days that passed by after the client was last contacted from a previous campaign (-1 means client was not previously contacted)
+* previous: number of contacts performed before this campaign and for this client
+* poutcome: outcome of the previous marketing campaign (qualitative)
+* y: Indicator of whether the client subscribed a term deposit (Binary target) 
+
+
+
+## Distribution
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+bank_long <- bank_full %>%
+  select(where(is.numeric)) %>% # numeric columns
+  pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
+
+ggplot(bank_long, aes(x = value)) +
+  geom_histogram(bins = 30, fill = "darkblue", color = "white", alpha = 0.7) +
+  facet_wrap(~ variable, scales = "free", ncol = 4) + 
+  labs(
+    title = "Distribution of Numeric Variables in bank_full Dataset",
+    x = "Value",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+```
+
+
+From the plots one can observe that the numeric variables are heavily skewed (balance, campaign, duration, pdays, previous). The dissemblance of the observations should take into account when considering the bias in our model fit.
+
+```{r}
+
+# Calculate and print the success rate
+success_rate <- mean(bank_full$y == "yes") * 100
+cat("Overall Subscription Success Rate:", round(success_rate, 2), "%\n")
+
+# bar plot for the target variable 'y'
+ggplot(bank_full, aes(x = y, fill = y)) +
+  geom_bar() +
+  labs(title = "Distribution of Term Deposit Subscription (y)",
+       x = "Subscribed to Term Deposit?",
+       y = "Count") +
+  theme_minimal()
+
+```
+
+# Convert variables to factors for plotting
+
+```{r}
+
+bank_full$y <- as.factor(bank_full$y)
+bank_full$job <- as.factor(bank_full$job)
+bank_full$marital <- as.factor(bank_full$marital)
+bank_full$education <- as.factor(bank_full$education)
+bank_full$contact <- as.factor(bank_full$contact)
+bank_full$month <- as.factor(bank_full$month)
+bank_full$poutcome <- as.factor(bank_full$poutcome)
+bank_full$housing <- as.factor(bank_full$housing)
+bank_full$loan <- as.factor(bank_full$loan)
+
+```
+
+
+```{r}
+
+ggplot(bank_full, aes(x = job, fill = y)) +
+  geom_bar(position = "fill") +
+  coord_flip() +
+  labs(title = "Subscription Rate by Job",
+       y = "Proportion") +
+  theme_minimal()
+
+```
+
+
+```{r}
+ggplot(bank_full, aes(x = education, fill = y)) +
+  geom_bar(position = "fill") +
+  coord_flip() +
+  labs(title = "Subscription Rate by Education Level",
+       y = "Proportion") +
+  theme_minimal()
+```
+
+```{r}
+
+ggplot(bank_full, aes(x = marital, fill = y)) +
+  geom_bar(position = "fill") +
+  coord_flip() +
+  labs(title = "Subscription Rate by Marital Status",
+       y = "Proportion") +
+  theme_minimal()
+
+```
+
+
+```{r}
+ggplot(bank_full, aes(x = contact, fill = y)) +
+  geom_bar(position = "fill") +
+  labs(title = "Subscription Rate by Contact Type",
+       y = "Proportion") +
+  theme_minimal()
+```
+
+
+```{r}
+ggplot(bank_full, aes(x = poutcome, fill = y)) +
+  geom_bar(position = "fill") +
+  labs(title = "Subscription Rate by Previous Marketing Campaign Outcome",
+       y = "Proportion") +
+  theme_minimal()
+```
+
+```{r}
+bank_full %>%
+  group_by(campaign) %>%
+  summarise(success_rate = mean(y == "yes")) %>%
+  ggplot(aes(x = campaign, y = success_rate)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Subscription Success Rate vs. Number of Campaign Contacts",
+       x = "Number of Contacts During This Campaign",
+       y = "Success Rate") +
+  theme_minimal()
+```
+
+
+```{r}
+summary(bank_full)
+```
+
+The categorical variables need to be set to categorical (or binary) variables, since R is reading the data as mere strings.
+
+```{r}
+bank_full$job <- as.factor(bank_full$job)
+bank_full$marital <- as.factor(bank_full$marital)
+bank_full$education <- as.factor(bank_full$education)
+bank_full$contact <- as.factor(bank_full$contact)
+bank_full$poutcome <- as.factor(bank_full$poutcome)
+bank_full$day <- as.factor(bank_full$day)
+bank_full$month <- as.factor(bank_full$month)
+
+bank_full$default <- ifelse(bank_full$default == "yes", 1, 0)
+bank_full$housing <- ifelse(bank_full$housing == "yes", 1, 0)
+bank_full$loan <- ifelse(bank_full$loan == "yes", 1, 0)
+
+```
+
+
+Plots for categorical variables
+
+```{r}
+
+cat_vars <- c("job", "marital", "education", "contact", "month", "poutcome")
+
+for (var in cat_vars) {
+p <- ggplot(bank_full, aes_string(x = var, fill = "y")) +
+geom_bar(position = "fill") +
+coord_flip() +
+labs(
+title = paste("Proportion of Subscription by", var),
+x = var,
+y = "Proportion"
+) +
+theme_minimal()
+
+print(p) 
+}
+
+```
+
+
+## We plan to use the k-fold cross validation approach. 
+For consideration: Are we able to make our training sets a sort of proper stratification of our population dataset (Imbalance in amounts of customers subscribed).
+
+```{r}
+#bank_train <- 
+#bank_test <- 
+library(caret)
+
+kfold_cv_model <- function(data, target_col, model_func, k = 5, seed = 123, ...) {
+set.seed(seed)
+
+folds <- createFolds(data[[target_col]], k = k, list = TRUE, returnTrain = TRUE)
+
+accuracy_list <- numeric(k)
+
+for (i in 1:k) {
+train_idx <- folds[[i]]
+train_data <- data[train_idx, ]
+test_data  <- data[-train_idx, ]
+model <- model_func(train_data, ...)
+
+pred_probs <- predict(model, newdata = test_data, type = "response")
+
+if (is.numeric(pred_probs)) {
+  pred <- ifelse(pred_probs > 0.5, "yes", "no")
+} else {
+  pred <- pred_probs
+}
+actual <- test_data[[target_col]]
+accuracy_list[i] <- mean(pred == actual)
+}
+mean_accuracy <- mean(accuracy_list)
+return(mean_accuracy)
+}
+```
+
+
+Model set up...
+
+## Lgoistic Regression
+
+```{r}
+library(glmnet)
+library(ggplot2)
+
+
+#bank_glm <- glm(y ~., data = bank_train, family = binomial)
+#summary(bank_glm)
+
+logistic_model <- function(train_data, ...) {
+glm(y ~ ., data = train_data, family = binomial)
+}
+
+accuracy_logit <- kfold_cv_model(bank_full, "y", logistic_model, k = 5)
+accuracy_logit
+
+cat("Logistic Regression 5-Fold CV Accuracy:", round(accuracy_logit * 100, 2), "%\n")
+
+```
+
+estimate test error
+
+## LDA and QDA
+
+```{r}
+library(MASS)
+
+#bank_lda <- lda(y ~., data = bank_full, subset = train)
+#bank_lda
+
+#bank_qda <- qda(y ~., data = bank_full, subset = train)
+
+set.seed(123)
+train_index <- sample(seq_len(nrow(bank_full)), size = 0.8 * nrow(bank_full))
+bank_train <- bank_full[train_index, ]
+bank_test <- bank_full[-train_index, ]
+```
+
+```{r}
+lda_model <- lda(y ~ ., data = bank_train)
+lda_model
+```
+
+```{r}
+lda_pred <- predict(lda_model, newdata = bank_test)$class
+lda_actual <- bank_test$y
+```
+
+```{r}
+lda_accuracy <- mean(lda_pred == lda_actual)
+lda_error <- 1 - lda_accuracy
+cat("LDA Test Accuracy:", round(lda_accuracy * 100, 2), "%\n")
+cat("LDA Test Error:", round(lda_error * 100, 2), "%\n")
+```
+
+
+
+```{r}
+qda_model <- qda(y ~ ., data = bank_train)
+qda_model
+```
+
+```{r}
+qda_pred <- predict(qda_model, newdata = bank_test)$class
+qda_actual <- bank_test$y
+```
+
+```{r}
+qda_accuracy <- mean(qda_pred == qda_actual)
+qda_error <- 1 - qda_accuracy
+cat("QDA Test Accuracy:", round(qda_accuracy * 100, 2), "%\n")
+cat("QDA Test Error:", round(qda_error * 100, 2), "%\n")
+```
+
+
+
+
+estimate test error
+
+## KNN
+Interpretable in a different way... Can be used to identify customers similar to those that are subscirbed.
+
+```{r}
+library(class)
+
+#bank_knn <- knn()
+```
+
+```{r}
+numeric_vars <- bank_full %>%
+select(-y) %>%
+select(where(is.numeric)) %>%
+names()
+train_x <- bank_train[, numeric_vars]
+test_x <- bank_test[, numeric_vars]
+```
+
+```{r}
+train_x_scaled <- scale(train_x)
+test_x_scaled <- scale(
+  test_x,
+  center = attr(train_x_scaled, "scaled:center"),
+  scale  = attr(train_x_scaled, "scaled:scale")
+)
+train_y <- bank_train$y
+test_y  <- bank_test$y
+```
+
+```{r}
+knn_pred <- knn(train = train_x_scaled,
+test = test_x_scaled,
+cl = train_y,
+k = 5)
+```
+
+```{r}
+knn_accuracy <- mean(knn_pred == test_y)
+knn_error <- 1 - knn_accuracy
+cat("KNN Test Accuracy:", round(knn_accuracy * 100, 2), "%\n")
+cat("KNN Test Error:", round(knn_error * 100, 2), "%\n")
+```
+
+```{r}
+k_values <- 1:25
+cv_accuracy <- numeric(length(k_values))
+folds <- createFolds(train_y, k = 5)
+for (i in seq_along(k_values)) {
+k <- k_values[i]
+fold_acc <- c()
+for (f in folds) {
+fold_train_x <- train_x_scaled[-f, ]
+fold_test_x <- train_x_scaled[f, ]
+fold_train_y <- train_y[-f]
+fold_test_y <- train_y[f]
+pred <- knn(
+  train = fold_train_x,
+  test  = fold_test_x,
+  cl    = fold_train_y,
+  k     = k
+)
+
+fold_acc <- c(fold_acc, mean(pred == fold_test_y))
+}
+cv_accuracy[i] <- mean(fold_acc)
+}
+best_k <- k_values[which.max(cv_accuracy)]
+best_k
+```
+
+```{r}
+plot(k_values, cv_accuracy, type = "b",
+xlab = "K Value", ylab = "Cross-Validated Accuracy",
+main = "K Optimization for KNN")
+abline(v = best_k, col = "red", lty = 2)
+```
+
+```{r}
+knn_best_pred <- knn(
+train = train_x_scaled,
+test = test_x_scaled,
+cl = train_y,
+k = best_k
+)
+final_accuracy <- mean(knn_best_pred == test_y)
+final_error <- 1 - final_accuracy
+cat("Best K:", best_k, "\n")
+cat("Test Accuracy with Best K:", round(final_accuracy * 100, 2), "%\n")
+cat("Test Error with Best K:", round(final_error * 100, 2), "%\n")
+```
+
+
+
+
+estimate test error
+
+Optimize K value (w.r.t cross validation test error)
+
+
+## GAM
+
+```{r}
+library(gam)
+#bank_gam <- gam(y ~ , data = bank_train) # basis functions
+```
+
+```{r}
+gam_model <- gam(
+y ~ s(age) + s(balance) + s(duration) + s(campaign) + s(pdays),
+family = binomial,
+data = bank_train
+)
+summary(gam_model)
+```
+
+```{r}
+gam_prob <- predict(gam_model, newdata = bank_test, type = "response")
+gam_pred <- ifelse(gam_prob > 0.5, "yes", "no")
+gam_pred <- as.factor(gam_pred)
+```
+
+```{r}
+actual <- bank_test$y
+gam_accuracy <- mean(gam_pred == actual)
+gam_error <- 1 - gam_accuracy
+cat("GAM Test Accuracy:", round(gam_accuracy * 100, 2), "%\n")
+cat("GAM Test Error:", round(gam_error * 100, 2), "%\n")
+```
+
+
+
+## Boosting Decision Trees
+require post-hoc explanation
+```{r}
+library(gbm)
+```
+```{r}
+bank_train$y_num <- ifelse(bank_train$y == "yes", 1, 0)
+bank_test$y_num <- ifelse(bank_test$y == "yes", 1, 0)
+set.seed(123)
+boost_model <- gbm(
+formula = y_num ~ . - y,
+data = bank_train,
+distribution = "bernoulli",
+n.trees = 1000,
+interaction.depth = 3,
+shrinkage = 0.01,
+n.minobsinnode = 10,
+verbose = FALSE
+)
+```
+
+```{r}
+boost_prob <- predict(boost_model, newdata = bank_test, n.trees = 1000, type = "response")
+boost_pred <- ifelse(boost_prob > 0.5, "yes", "no")
+```
+
+```{r}
+boost_accuracy <- mean(boost_pred == bank_test$y)
+boost_error <- 1 - boost_accuracy
+cat("Boosting Test Accuracy:", round(boost_accuracy * 100, 2), "%\n")
+cat("Boosting Test Error:", round(boost_error * 100, 2), "%\n")
+summary(boost_model)
+```
+Post-hoc explanation: Boosting combines the small decision trees to not make the same mistake the previous one has made. Which creates a very good and accurate model. 
+
+Ω
+Potential model Mixed effects model (attribute set variables to have a random effect)
+
+
+
+
+
+
+
+
