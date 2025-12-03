@@ -34,5 +34,97 @@ We would like to maintain interpretability in our model. Emphasis is predicated 
   - Feature Selection and model tuning (subset, regularization, dimension reduction)
 
 
+## 3. Data and Preprocessing
+3.1 Dataset Description
+
+Source: UCI Machine Learning Repository.
+
+Number of observations and predictors.
+
+Summary of variable types (categorical, numeric, campaign history).
+
+3.3 Exploratory Data Analysis
+
+Distribution of the response variable (class imbalance).
+
+Univariate summaries: histograms, bar plots.
+
+Key relationships between predictors and response.
+
+## 4. Methodology
+4.1 Overview of Statistical Learning Framework
+
+Supervised binary classification.
+
+Tradeoff between interpretability and predictive power.
+
+4.2 Resampling Methods (ISLR Ch. 5)
+4.2.1 Train/Test Split
+
+Rationale for honest evaluation.
+
+4.2.2 k-Fold Cross-Validation
+
+Applied to Logistic Regression, KNN, and GAM (if included).
+
+Used for model tuning and error estimation.
+
+4.2.3 Bootstrap (Optional)
+
+Estimating coefficient variability in Logistic Regression.
+
+4.3 Candidate Models (ISLR Ch. 4 & 6)
+
+Logistic Regression
+
+Linear Discriminant Analysis (LDA)
+
+Quadratic Discriminant Analysis (QDA)
+
+K-Nearest Neighbors (KNN) with CV-selected k
+
+Generalized Additive Models (GAM) (optional but interpretable)
+
+4.4 Assessment Metrics (ISLR Ch. 6)
+
+Test misclassification rate.
+
+Sensitivity & specificity.
+
+Confusion matrix.
+
+ROC curve and AUC.
+
+BIC (when applicable).
 
 
+## 5. Results
+5.1 Cross-Validation Findings
+
+Optimal tuning parameters (e.g., best k for KNN).
+
+CV-estimated test errors for each model.
+
+5.2 Test Set Performance
+
+Summary table: accuracy, sensitivity, specificity, AUC.
+
+ROC curves for model comparison.
+
+5.3 Interpretation of Key Predictors
+
+Coefficient signs and magnitudes (Logistic).
+
+Group separation interpretation (LDA/QDA).
+
+Partial dependence/smooth terms (GAM).
+
+
+## 6. Discussion
+- Which model offers the best predictive accuracy?
+- Which model is most interpretable for a marketing manager?
+- How did resampling methods influence the final choice?
+- Effects of class imbalance.
+- Limitations and suggested future modeling directions.
+
+Future directions: oversampling methods, modern ML models.

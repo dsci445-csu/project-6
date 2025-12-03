@@ -10,74 +10,69 @@ load clean data
 ```
 
 
-## We plan to use the k-fold cross validation approach. 
-For consideration: Are we able to make our training sets a sort of proper stratification of our population dataset (Imbalance in amounts of customers subscribed).
 
-```{r}
-bank_train <- 
-bank_test <- 
-```
+## 2.3 Train/Test split
+- Explain purpose of an honest out-of-sample evaluation.
+- k-fold CV, k=5
 
 
+---
 
-## Lgoistic Regression
+# 3. Modeling 
 
-```{r}
-library(glmnet)
-library(ggplot2)
+## 3.1 Logistic Regression (Baseline Model)
+- Fit logistic regression.
+- k-fold CV for estimated test error.
+- Assess linearity and consider interactions if appropriate.
+- Optional: **regularized logistic regression** (Ridge/Lasso) using CV-selected $\lambda$.
 
+## 3.2 Linear Discriminant Analysis (LDA)
+- Fit LDA model.
+- k-fold CV for estimated test error.
+- Check assumptions (normality, equal covariance).
+- Discuss bias-variance
 
-bank_glm <- glm(y ~., data = bank_train, family = binomial)
-summary(bank_glm)
-```
-
-estimate test error
-
-## LDA and QDA
-
-```{r}
-library(MASS)
-
-bank_lda <- lda(y ~., data = bank_full, subset = train)
-bank_lda
-
-bank_qda <- qda(y ~., data = bank_full, subset = train)
-```
-
-estimate test error
-
-## KNN
-Interpretable in a different way... Can be used to identify customers similar to those that are subscirbed.
-
-```{r}
-library(class)
-
-bank_knn <- knn()
-```
-
-estimate test error
-
-Optimize K value (w.r.t cross validation test error)
+## 3.3 Quadratic Discriminant Analysis (QDA)
+- Fit QDA model.
+- k-fold CV for estimated test error.
+- Discuss overfitting risk with higher model flexibility.
+- Compare performance with LDA.
 
 
-## GAM
+## 3.4 K-Nearest Neighbors (KNN)
+- Standardize numeric predictors.
+- Perform CV to tune **k** .
+- Report best k and corresponding CV error.
+- Discuss bias-variance behavior.
 
-```{r}
-library(gam)
-bank_gam <- gam(y ~ , data = bank_train) # basis functions
+## 3.5 Generalized Additive Models (GAM)
+- Fit GAM with smoothing splines for continuous variables.
+- Use CV to choose smoothing parameters.
+- Examine partial effect plots for interpretability.
 
+## 3.6 Boosting (Most Flexible Model)
+- Fit gradient boosting classifier (e.g., `gbm` or `xgboost`).
+- Use cross-validation for:
+  - number of trees,
+  - interaction depth,
+  - learning rate.
+- Discuss complexity vs interpretability tradeoff. This model will be our benchmark non-interpretable model to compare interpretable models fitted above.
 
-```
+---
 
-## Boosting Decision Trees
-require post-hoc explanation
+# 4. Results — Model Assessment & Comparison  
 
-```{r}
+## 4.1 Test Set Performance
+For each model:
+- Confusion matrix  
+  - Accuracy and misclassification rate  
+  - Sensitivity / specificity (important for minority class)  
+- ROC curves and AUC  
 
-```
-
-
-Potential model Mixed effects model (attribute set variables to have a random effect)
+## 4.2 Comparative Evaluation
+- Table summarizing all test-set performance metrics.
+- Visual comparison of ROC curves.
+- Discuss interpretability vs predictive quality.
 
 
 
