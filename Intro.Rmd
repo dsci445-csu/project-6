@@ -78,6 +78,10 @@ ggplot(bank_full, aes(x = y, fill = y)) +
 
 ```
 
+**Description:** A simple bar chart showing the imbalance between clients who subscribed to a term deposit (“yes”) and those who did not (“no”), with the majority belonging to the “no” category.
+
+
+
 # Convert variables to factors for plotting
 
 ```{r}
@@ -106,6 +110,8 @@ ggplot(bank_full, aes(x = job, fill = y)) +
 
 ```
 
+**Description:** A stacked bar chart illustrating the proportion of subscription outcomes across different job types, with retired and student occupations showing relatively higher subscription rates.
+
 
 ```{r}
 ggplot(bank_full, aes(x = education, fill = y)) +
@@ -115,6 +121,9 @@ ggplot(bank_full, aes(x = education, fill = y)) +
        y = "Proportion") +
   theme_minimal()
 ```
+
+**Description:** A proportional bar chart comparing subscription rates across education levels, indicating that clients with tertiary education have a higher tendency to subscribe.
+
 
 ```{r}
 
@@ -128,6 +137,9 @@ ggplot(bank_full, aes(x = marital, fill = y)) +
 ```
 
 
+**Description:** A stacked bar chart showing subscription proportions by marital status, revealing that single clients have a slightly higher subscription rate compared to married or divorced clients.
+
+
 ```{r}
 ggplot(bank_full, aes(x = contact, fill = y)) +
   geom_bar(position = "fill") +
@@ -137,6 +149,9 @@ ggplot(bank_full, aes(x = contact, fill = y)) +
 ```
 
 
+**Description:** A proportional bar chart comparing subscription outcomes by contact method, with cellular contacts showing a notably higher subscription rate than telephone or unknown contact types.
+
+
 ```{r}
 ggplot(bank_full, aes(x = poutcome, fill = y)) +
   geom_bar(position = "fill") +
@@ -144,6 +159,10 @@ ggplot(bank_full, aes(x = poutcome, fill = y)) +
        y = "Proportion") +
   theme_minimal()
 ```
+
+**Description:** A stacked bar chart depicting how the outcome of previous marketing campaigns influences current subscription rates, with previous “success” outcomes leading to higher subscription proportions.
+
+
 
 ```{r}
 bank_full %>%
@@ -158,7 +177,7 @@ bank_full %>%
   theme_minimal()
 ```
 
-What does this mean? ^
+**Description:** A line plot with points showing how the subscription success rate declines as the number of contacts during the campaign increases, suggesting diminishing returns with repeated contact attempts.
 
 
 ```{r}
