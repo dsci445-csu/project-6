@@ -13,7 +13,7 @@ output:
 
 ## motivation
 (13% of the content)\
-The Bank Marketing dataset contains information collected from a Portuguese banking institution during multiple direct telemarketing campaigns (source1). *Why??* (We want to justify the efforts of modeling this data)
+The Bank Marketing dataset contains information collected from a Portuguese banking institution during multiple direct telemarketing campaigns (source1). *Why??* (We want to justify the efforts of modeling this data, then whwy it needs to be accurate)
 
 **Description of dataset** \
 Each row represents an individual client that was contacted in an attempt to sell a long-term deposit product. The dataset includes 16 predictor variables describing client demographics, financial attributes, and details about the marketing campaign itself (such as: contact method, call duration, number of contacts, outcome of previous campaigns).

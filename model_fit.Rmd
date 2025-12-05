@@ -3,17 +3,126 @@ title: "model_fit"
 output: html_document
 ---
 
-load clean data
+load libraries and clean data
 
 ```{r}
+library(readr)
+library(tidyverse)
+library(boot)
+library(glmnet)
+library(caret)
+library(pROC)
+library(ggplot2)
+
+set.seed(445) 
+
+bank_full <- read_delim("data/bank-full_1.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+```
+
+
+```{r}
+bank_full$y <- factor(bank_full$y, levels = c("no", "yes"))
+
+
+bank_full <- bank_full %>%
+  mutate(
+    job = as.factor(job),
+    marital = as.factor(marital),
+    education = as.factor(education),
+    default = as.factor(default),
+    housing = as.factor(housing),
+    loan = as.factor(loan),
+    contact = as.factor(contact),
+    month = as.factor(month),
+    poutcome = as.factor(poutcome))
 
 ```
 
 
-
-## 2.3 Train/Test split
+## Train/Test split
 - Explain purpose of an honest out-of-sample evaluation.
 - k-fold CV, k=5
+
+```{r}
+bank_full$previously_contacted <- factor(ifelse(bank_full$pdays == -1, "No", "Yes"), levels = c("No", "Yes"))
+bank_full$pdays_non_miss <- ifelse(bank_full$pdays == -1, NA, bank_full$pdays)
+
+train_index <- createDataPartition(bank_full$y, p = 0.8, list = FALSE, times = 1)
+train_data <- bank_full[train_index, ]
+test_data <- bank_full[-train_index, ]
+```
+
+
+## subset selection
+- Backward step-wise elimination (ecalutes fit using AIC)
+
+```{r}
+initial_formula <- y ~ age + job + marital + education + default + balance + housing + loan + 
+  contact + day + month + campaign + pdays + previous + poutcome + previously_contacted
+
+# Fit the model with maximum covaraints on the training set
+glm.full <- glm(initial_formula, data = train_data, family = binomial)
+
+# Use the step function to perform backward elimination based on AIC
+glm.selected <- step(
+  glm.full, 
+  direction = "backward", 
+  trace = 0
+)
+
+selected_formula <- formula(glm.selected)
+selected_formula
+
+```
+
+
+    
+
+```{r}
+
+interact_formula <- update(selected_formula, . ~ .^2) 
+
+# Fit the maximal interaction model (CAUTION: This can be slow and unstable with many factors)
+glm.full.interact <- glm(interact_formula, data = train_data, family = binomial)
+glm.full.interact.summary <- summary(glm.full.interact)
+```
+
+
+```{r}
+coef_table <- glm.full.interact.summary$coefficients
+coef_df <- as.data.frame(coef_table)
+
+view(coef_df %>%  filter(`Pr(>|z|)`< 0.01))
+```
+
+job:contact
+job:month
+education:housing
+housing:month
+contact:month
+day:month
+month:poutcome
+
+
+```{r}
+interact_formula_significant <- y ~ job + marital + education + balance + housing + loan + contact + 
+  day + month + campaign + previous + poutcome + job:contact + job:month + education:housing + housing:month +
+  contact:month + day:month + month:poutcome
+  
+glm.full.interact_significant <- glm(interact_formula_significant, data = train_data, family = binomial)
+
+
+glm.interact.selected <- step(
+  glm.full.interact_significant, 
+  direction = "backward", 
+  trace = 1 
+)
+
+selected_interact_formula <- formula(glm.interact.selected)
+selected_interact_formula
+```
+
 
 
 ---
@@ -26,17 +135,251 @@ load clean data
 - Assess linearity and consider interactions if appropriate.
 - Optional: **regularized logistic regression** (Ridge/Lasso) using CV-selected $\lambda$.
 
-## 3.2 Linear Discriminant Analysis (LDA)
-- Fit LDA model.
-- k-fold CV for estimated test error.
-- Check assumptions (normality, equal covariance).
-- Discuss bias-variance
 
-## 3.3 Quadratic Discriminant Analysis (QDA)
-- Fit QDA model.
-- k-fold CV for estimated test error.
-- Discuss overfitting risk with higher model flexibility.
-- Compare performance with LDA.
+
+*Standard raw logistic reg (without tuning)*
+
+```{r}
+glm_out <- glm(y ~ ., data = bank_full, family = binomial)
+summary(glm_out)
+```
+
+Discuss accuracy (cv test error) and amount of parameters
+
+```{r}
+glm.full.cv <- glm(initial_formula, data = data, family = binomial, x = TRUE)
+
+cv.error.full <- cv.glm(data, glm.full.cv, K = 5)$delta[2]
+length(coef(glm.full.cv))
+```
+
+This model is complex due to the large number of dummy variables. The CV test error provides an estimate of how well this complexity generalizes to new, out of sample data. If the CV error is significantly higher than the training error, the model is likely overfitting
+
+
+*With step-wise feature selection* (our base line)
+
+```{r}
+# Re-fit the final selected model
+glm.baseline <- glm(selected_formula, data = train_data, family = binomial)
+summary(glm.baseline)
+
+```
+
+
+```{r}
+glm_out <- glm(y ~ job + marital + education + balance + housing + loan + contact + 
+    day + month + campaign + previous + poutcome,
+    data = bank_full,
+    family = binomial, # Or whatever family you used
+    x = TRUE,
+    model = TRUE
+)
+
+cv.error.baseline <- cv.glm(
+    bank_full, #only include features that are fit
+    glm_out, K = 5)
+
+cv.error.baseline$delta[2]
+```
+
+
+```{r}
+glm.probs.baseline <- predict(glm.baseline, newdata = test_data, type = "response")
+
+glm.pred.baseline <- factor(ifelse(glm.probs.baseline > 0.5, "yes", "no"), levels = c("no", "yes"))
+confusionMatrix(glm.pred.baseline, test_data$y, positive = "yes")
+
+```
+
+
+- analysis of parameters and example predictions with interpretation
+
+
+residual plots (numeric features)... this will lead to inclusion of non-linear features
+
+```{r}
+glm.resids <- residuals(glm.full, type = "deviance")
+
+# Function to plot residuals vs a numeric predictor
+plot_residuals_vs_predictor <- function(predictor_name, data, residuals) {
+  df <- data.frame(
+    Residuals = residuals,
+    Predictor = data[[predictor_name]]
+  ) %>% filter(!is.na(Predictor))
+  
+  p <- ggplot(df, aes(x = Predictor, y = Residuals)) +
+    geom_point(alpha = 0.3) +
+    geom_smooth(method = "loess", color = "red", se = FALSE) + # Add a smoothing line
+    geom_hline(yintercept = 0, linetype = "dashed", color = "blue") +
+    labs(
+      title = paste("Deviance Residuals vs.", predictor_name),
+      y = "Deviance Residuals",
+      x = predictor_name
+    ) +
+    theme_minimal()
+  print(p)
+}
+
+# Plot residuals for key numeric features
+plot_residuals_vs_predictor("age", train_data, residuals(glm.full, type = "deviance"))
+plot_residuals_vs_predictor("balance", train_data, residuals(glm.full, type = "deviance"))
+```
+
+
+
+
+
+*polynomials logit reg (on Balance or other numeric variables)*
+- test models with transformations (polynomial or Log)
+- test models with interaction terms
+
+```{r}
+
+```
+
+
+```{r}
+glm.test.linearity <- glm(y ~ job + marital + education + balance + housing + loan + contact + 
+    day + month + campaign + previous + poutcome + I(balance^2), data = train_data, family = binomial)
+
+summary(glm.test.linearity)$coefficients["I(balance^2)", "Pr(>|z|)"]
+
+# Interaction: Test interaction between 'age' and 'campaign' (common drivers).
+glm.test.interaction <- glm(selected_formula, data = train_data, family = binomial)
+glm.test.interaction <- update(glm.test.interaction, . ~ . + age:campaign)
+
+print(anova(glm.full, glm.test.interaction, test = "Chisq"))
+```
+
+*Regularized logit reg*
+
+Ridge
+- test across lambda values (and plot) with mean CV test error
+- confussion matrix and roc curve
+
+```{r}
+full_predictors_formula <- y ~ age + job + marital + education + default + balance + housing + loan + 
+  contact + day + month + campaign + pdays + previous + poutcome + previously_contacted
+
+X_train_ridge <- model.matrix(full_predictors_formula, data = train_data)[, -1] 
+y_train_ridge <- train_data$y
+
+```
+
+k-fold CV for optimal lambda
+
+```{r}
+cv.ridge.fit <- cv.glmnet(
+  X_train_ridge, 
+  y_train_ridge, 
+  alpha = 0, 
+  family = "binomial", 
+  nfolds = 5
+) 
+
+lambda_min <- cv.ridge.fit$lambda.min
+lambda_min
+```
+
+fit using optimal lambda
+
+```{r}
+X_test_ridge <- model.matrix(full_predictors_formula, data = test_data)[, -1] 
+
+ridge.probs <- predict(cv.ridge.fit, newx = X_test_ridge, s = lambda_min, type = "response") %>%
+  as.vector()
+
+plot(cv.ridge.fit)
+
+ridge.pred <- factor(ifelse(ridge.probs > 0.5, "yes", "no"), levels = c("no", "yes"))
+confusionMatrix(ridge.pred, test_data$y, positive = "yes")
+```
+
+
+
+
+
+LASSO
+- test across lambda values (and plot) with mean CV test error
+- confussion matrix and roc curve
+
+```{r}
+X_train_lasso <- X_train_ridge
+y_train_lasso <- y_train_ridge
+```
+
+k-fold CV for optimal lambda
+
+```{r}
+cv.lasso.fit <- cv.glmnet(
+  X_train_lasso, 
+  y_train_lasso, 
+  alpha = 1, 
+  family = "binomial", 
+  nfolds = 5
+) 
+
+lambda_min_lasso <- cv.lasso.fit$lambda.min
+lambda_min_lasso
+
+
+plot(cv.lasso.fit)
+title("LASSO CV Error vs. Log(Lambda)", line = 2.5)
+abline(v = log(lambda_min_lasso), col = "red", lty = 2) 
+
+```
+
+
+fit using optimal lambda
+
+```{r}
+X_test_lasso <- X_test_ridge # Use the same test design matrix
+
+lasso.probs <- predict(cv.lasso.fit, newx = X_test_lasso, s = lambda_min_lasso, type = "response") %>% 
+  as.vector()
+
+lasso.pred <- factor(ifelse(lasso.probs > 0.5, "yes", "no"), levels = c("no", "yes"))
+confusionMatrix(lasso.pred, test_data$y, positive = "yes")
+
+```
+
+
+
+
+
+
+*plot ROC curves and table confusion matrix for the above models*
+
+```{r}
+roc_baseline <- roc(test_data$y, glm.probs.baseline, direction = "<")
+roc_ridge <- roc(test_data$y, ridge.probs, direction = "<")
+
+
+roc_data <- tibble(
+  Specificity = c(roc_baseline$specificities, roc_ridge$specificities), # include the raw logit model
+  Sensitivity = c(roc_baseline$sensitivities, roc_ridge$sensitivities),
+  Model = c(rep(paste0("Baseline (AUC=", round(auc(roc_baseline), 3), ")"), length(roc_baseline$specificities)), 
+            rep(paste0("Ridge (AUC=", round(auc(roc_ridge), 3), ")"), length(roc_ridge$specificities)))
+)
+
+# Plot the ROC curves 
+ggplot(roc_data, aes(x = 1 - Specificity, y = Sensitivity, color = Model)) +
+  geom_line(linewidth = 1) +
+  geom_abline(lty = 2, color = "gray50") + 
+  labs( title = "ROC Curve Comparison: Baseline vs. Ridge Logit",
+    x = "False Positive Rate (1 - Specificity)",
+    y = "True Positive Rate (Sensitivity)",
+    color = "Model") +
+  theme_minimal(base_size = 14) 
+
+
+```
+
+
+
+---
+
+
 
 
 ## 3.4 K-Nearest Neighbors (KNN)
@@ -57,8 +400,6 @@ load clean data
   - interaction depth,
   - learning rate.
 - Discuss complexity vs interpretability tradeoff. This model will be our benchmark non-interpretable model to compare interpretable models fitted above.
-
----
 
 # 4. Results — Model Assessment & Comparison  
 
