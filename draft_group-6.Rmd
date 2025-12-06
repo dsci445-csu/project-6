@@ -70,7 +70,7 @@ We also carried out:
 - Feature selection using stepwise regression and subset selection for logistic regression
 - Regularization techniques (ridge/lasso) when appropriate
 - Dimensionality reduction (e.g., PCA) if needed to improve KNN performance
-- Hyperparameter tuning for KNN (choice of k), QDA (regularization), and boosting (learning rate, number of trees)
+- Hyperparameter tuning for KNN (choice of k)
 
 This section of the paper will include the formal model equations and the details of the validation procedure.
 
