@@ -1,6 +1,8 @@
 ---
 title: "draft_group-6"
+author: "Sandra, Tigist, Mussa, Waddah"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -8,123 +10,89 @@ output:
 *Paper (40%)* A paper detailing the motivation, methodology, and results of your project, complete with references. (https://dsci445-csu.github.io/project/)
 
 
-
 # Outline
 
-## motivation
+## Motivation
 (13% of the content)\
 The Bank Marketing dataset contains information collected from a Portuguese banking institution during multiple direct telemarketing campaigns (source1). *Why??* (We want to justify the efforts of modeling this data, then whwy it needs to be accurate)
 
 **Description of dataset** \
-Each row represents an individual client that was contacted in an attempt to sell a long-term deposit product. The dataset includes 16 predictor variables describing client demographics, financial attributes, and details about the marketing campaign itself (such as: contact method, call duration, number of contacts, outcome of previous campaigns).
-These variables are a mix of categorical and quantitative data, which makes this dataset well-suited for comparing multiple classification models. The target variable indicates whether the client subscribed to a term deposit (yes/no). As usual, the majority of clients do not subscribe (source 2). This causes an imbalance in our data by increasing modeling bias.
+Each observation in the dataset corresponds to a single client contacted during the bank’s telemarketing campaigns. The dataset includes 16 predictor variables, which cover:
 
-**Problem statement/Assumptions** \
-We can go over what we are focusing on and what factors we may ignore.
+- Demographics: age, occupation, marital status, education
+- Financial indicators: loan status, credit history, average account balance
+- Marketing campaign features: type of contact, month/day of contact, call duration
+- Past campaign outcomes: number of previous contacts and whether they were successful
 
-We would like to maintain interpretability in our model. Emphasis is predicated for the model to provide actionable insght to the manager. After all humans love stories.
+These variables include both categorical and quantitative features, making the dataset suitable for comparing a variety of classification methods.
 
+The target variable, y, is a binary indicator specifying whether the client subscribed to a term deposit (yes/no). As is typical in marketing data, the positive class (“yes”) is rare, meaning most clients do not subscribe (source 2). This creates a class imbalance, which can bias models toward predicting the majority class unless addressed appropriately.
 
-## methodology 
-(60%)
+**Problem Statement/Assumptions** \
+The goal of this project is to build statistical models that can predict whether a client will subscribe to a term deposit based on their demographic, financial, and campaign-related characteristics. This is a binary classification problem.
 
-- Data wrangling/cleaning
-- For each model (Logistic, LDA, QDA, KNN, GAM, Boosting)
-  - Model Formulation (training data, with k-fold CV)
-  - Feature Selection and model tuning (subset, regularization, dimension reduction)
+Our focus is on models that provide both good predictive performance and interpretability, since managers need results they can explain and translate into marketing strategies. Interpretability is especially valuable in domains such as banking, where decisions must be justified for ethical, customer-centric, and regulatory reasons.
 
+To keep the scope focused, we make several simplifying assumptions:
 
-## 3. Data and Preprocessing
-3.1 Dataset Description
+- We treat all observations as independent, even though clients may appear in multiple campaigns.
+- We do not use time-series methods, even though campaign month/day could be part of a temporal structure.
+- We prioritize models covered in class, especially those that illustrate differences in linearity, flexibility, and underlying assumptions (e.g., covariance structure for LDA and QDA).
+- We assume the data used for modeling reflects the population targeted by the campaign, meaning the model can be applied to future clients with similar characteristics.
 
-Source: UCI Machine Learning Repository.
-
-Number of observations and predictors.
-
-Summary of variable types (categorical, numeric, campaign history).
-
-3.3 Exploratory Data Analysis
-
-Distribution of the response variable (class imbalance).
-
-Univariate summaries: histograms, bar plots.
-
-Key relationships between predictors and response.
-
-## 4. Methodology
-4.1 Overview of Statistical Learning Framework
-
-Supervised binary classification.
-
-Tradeoff between interpretability and predictive power.
-
-4.2 Resampling Methods (ISLR Ch. 5)
-4.2.1 Train/Test Split
-
-Rationale for honest evaluation.
-
-4.2.2 k-Fold Cross-Validation
-
-Applied to Logistic Regression, KNN, and GAM (if included).
-
-Used for model tuning and error estimation.
-
-4.2.3 Bootstrap (Optional)
-
-Estimating coefficient variability in Logistic Regression.
-
-4.3 Candidate Models (ISLR Ch. 4 & 6)
-
-Logistic Regression
-
-Linear Discriminant Analysis (LDA)
-
-Quadratic Discriminant Analysis (QDA)
-
-K-Nearest Neighbors (KNN) with CV-selected k
-
-Generalized Additive Models (GAM) (optional but interpretable)
-
-4.4 Assessment Metrics (ISLR Ch. 6)
-
-Test misclassification rate.
-
-Sensitivity & specificity.
-
-Confusion matrix.
-
-ROC curve and AUC.
-
-BIC (when applicable).
+These choices allow us to compare several classification approaches under a consistent framework.
 
 
-## 5. Results
-5.1 Cross-Validation Findings
+## Methodology 
 
-Optimal tuning parameters (e.g., best k for KNN).
-
-CV-estimated test errors for each model.
-
-5.2 Test Set Performance
-
-Summary table: accuracy, sensitivity, specificity, AUC.
-
-ROC curves for model comparison.
-
-5.3 Interpretation of Key Predictors
-
-Coefficient signs and magnitudes (Logistic).
-
-Group separation interpretation (LDA/QDA).
-
-Partial dependence/smooth terms (GAM).
+#### Data Wrangling and Cleaning:
 
 
-## 6. Discussion
-- Which model offers the best predictive accuracy?
-- Which model is most interpretable for a marketing manager?
-- How did resampling methods influence the final choice?
-- Effects of class imbalance.
-- Limitations and suggested future modeling directions.
+We began by loading the dataset, converting categorical variables into factors, and identifying “unknown” levels used in place of missing data. We evaluated several approaches to handling these values—including keeping “unknown” as its own category and treating them as missing, but ultimately selected the method that preserved the most information without distorting class balance.
 
-Future directions: oversampling methods, modern ML models.
+A train/test split was created, and all models were trained using the same set of cleaned predictors for fair comparison.
+
+### Models Considered:
+
+We evaluated five main models from the course:
+
+- Logistic Regression — A linear classifier that estimates the log-odds of subscription. It is highly interpretable and provides coefficients that can be directly translated into marketing insights.
+
+- Linear Discriminant Analysis (LDA) — A generative model that assumes equal covariance matrices for each class and normally distributed predictors. LDA often performs well in structured tabular data.
+
+- Quadratic Discriminant Analysis (QDA) — Similar to LDA, but allows each class to have its own covariance matrix, giving the model more flexibility.
+- K-Nearest Neighbors (KNN) — A nonparametric method that makes predictions by finding the k most similar clients. It captures nonlinear relationships but can be sensitive to scaling and high-dimensional data.
+
+- Boosting (e.g., AdaBoost or Gradient Boosting) — An ensemble method that sequentially builds weak learners to minimize classification error. Boosting is often superior in predictive accuracy but is less interpretable.
+
+### Model Training, Formulation, and Validation
+
+All models were trained using k-fold cross-validation to estimate out-of-sample performance. This approach reduces variance and ensures that results do not depend on a single train/test split.
+
+We also carried out:
+- Feature selection using stepwise regression and subset selection for logistic regression
+- Regularization techniques (ridge/lasso) when appropriate
+- Dimensionality reduction (e.g., PCA) if needed to improve KNN performance
+- Hyperparameter tuning for KNN (choice of k), QDA (regularization), and boosting (learning rate, number of trees)
+
+This section of the paper will include the formal model equations and the details of the validation procedure.
+
+
+## Results
+
+Once our models are trained, we will compare their performance using test error rate, confusion matrices, and metrics such as accuracy, recall, and AUC. Because the dataset is imbalanced, we expect recall and AUC to be especially important for evaluating how well each model identifies clients who subscribe.
+
+We will also create ROC curves to compare models visually and use information criteria (AIC/BIC) for parametric models where appropriate. After summarizing these results, we will determine which model performs best overall and which provides the most useful insights for guiding future marketing decisions
+
+## Discussion
+
+Since we are still exploring the dataset and fitting our models, we have not yet determined which classification method will perform best. However, based on the structure of the Bank Marketing data and findings from similar studies, we expect that boosting is likely to give the best predictive accuracy, while logistic regression will likely be the most interpretable and actionable for managers.
+
+In the final version of this section, we will compare the models based on their test performance, interpretability, and robustness to class imbalance. We will also discuss any limitations of our approach and suggest future improvements, such as trying resampling methods or evaluating additional machine learning models.
+
+
+## References
+
+Dua, D., & Graff, C. (2019). UCI Machine Learning Repository: Bank Marketing Dataset. 
+https://archive.ics.uci.edu/dataset/222/bank+marketing
+
