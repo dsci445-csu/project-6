@@ -114,7 +114,7 @@ output: ioslides_presentation
 
 
 
-## Discussion: The Trade-Off (Slide 14)
+## Discussion: The Trade-Off (Slide 14)  
 * **Discuss:** Reiterate the central trade-off: **Boosting** is the best *predictor*, but the **Regularized Logistic Regression** offers the most *interpretable* and *actionable* insights for the bank.
 * **Discuss:** Final actionable advice for the bank: use **LogReg insights** to design campaigns and **Boosting** for a final scoring model if maximum predictive accuracy is needed.
 * **Image/Plot Idea:** A visual metaphor (e.g., a scale or seesaw) contrasting "High Performance" vs. "High Interpretability."
@@ -122,13 +122,13 @@ output: ioslides_presentation
 ---
 
 
-## Discussion: Business Impact (Slide 13)
+## Discussion: Business Impact (Slide 13)  #MUSSA
 * **Discuss:** How the **chosen model** (Balancing performance and interpretability) can lead to **cost savings** and **higher ROI** for future campaigns.
 * **Discuss:** Briefly touch upon **regulatory/ethical implications** in banking and the need to justify predictions (further supporting the value of interpretability).
 * **Image/Plot Idea:** A currency symbol or a bar chart showing the conceptual increase in ROI due to better targeting.
 
 
-## Discussion: Limitations & Future Work (Slide 14)
+## Discussion: Limitations & Future Work (Slide 14)  #MUSSA
 * **Discuss:** Acknowledge limitations, such as not using **time-series analysis** or fully accounting for the dependency of the 'duration' feature.
 * **Discuss:** Suggest future improvements: Exploring advanced techniques like **resampling methods** (SMOTE) to handle imbalance better or trying **Deep Learning** models.
 * **Image/Plot Idea:** A bulleted list of 2-3 **future research questions** (e.g., Time-Series, SMOTE, Deep Learning).

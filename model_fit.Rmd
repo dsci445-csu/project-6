@@ -93,7 +93,7 @@ glm.full.interact.summary <- summary(glm.full.interact)
 coef_table <- glm.full.interact.summary$coefficients
 coef_df <- as.data.frame(coef_table)
 
-view(coef_df %>%  filter(`Pr(>|z|)`< 0.01))
+sample(coef_df %>%  filter(`Pr(>|z|)`< 0.01))
 ```
 
 job:contact
@@ -136,24 +136,6 @@ selected_interact_formula
 - Optional: **regularized logistic regression** (Ridge/Lasso) using CV-selected $\lambda$.
 
 
-
-*Standard raw logistic reg (without tuning)*
-
-```{r}
-glm_out <- glm(y ~ ., data = bank_full, family = binomial)
-summary(glm_out)
-```
-
-Discuss accuracy (cv test error) and amount of parameters
-
-```{r}
-glm.full.cv <- glm(initial_formula, data = data, family = binomial, x = TRUE)
-
-cv.error.full <- cv.glm(data, glm.full.cv, K = 5)$delta[2]
-length(coef(glm.full.cv))
-```
-
-This model is complex due to the large number of dummy variables. The CV test error provides an estimate of how well this complexity generalizes to new, out of sample data. If the CV error is significantly higher than the training error, the model is likely overfitting
 
 
 *With step-wise feature selection* (our base line)
