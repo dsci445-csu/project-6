@@ -202,7 +202,7 @@ bank_full$loan <- ifelse(bank_full$loan == "yes", 1, 0)
 ```
 
 
-Plots for categorical variables
+Plots for categorical variables (S.A.)
 
 ```{r}
 
@@ -223,13 +223,4 @@ print(p)
 }
 
 ```
-
-
-
-
-
-
-
-
-
-
+**Description:** These plots show that subscription rates vary meaningfully across categorical variables, with certain jobs, higher education levels, specific contact methods (especially cellular), particular months, and prior campaign successes all associated with higher proportions of clients subscribing to a term deposit.
