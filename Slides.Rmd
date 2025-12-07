@@ -248,12 +248,177 @@ metrics %>% kable()
 * **Discuss:** **KNN** requires scaling: all numeric predictors were **standardized** (mean=0, SD=1) to prevent features with larger scales from dominating the distance calculation.
 * **Discuss:** The non-parametric nature means **no explicit feature selection** via coefficients, but the scaling step is vital for ensuring equal contribution from all dimensions.
 * **Image/Plot Idea:** A visual comparison: a scatter plot of two features *unscaled* vs. the same features *scaled/standardized*. 
+```{r}
+library(dplyr)
+library(class)
+library(caret)
+
+
+set.seed(123)
+train_index <- sample(nrow(bank_full), 0.8 * nrow(bank_full))
+bank_train <- bank_full[train_index, ]
+bank_test  <- bank_full[-train_index, ]
+
+numeric_vars <- names(bank_full)[sapply(bank_full, is.numeric)]
+numeric_vars <- setdiff(numeric_vars, "y")
+
+train_x <- bank_train[, numeric_vars, drop = FALSE]
+test_x  <- bank_test[, numeric_vars, drop = FALSE]
+
+train_x <- bank_train[, numeric_vars]
+test_x  <- bank_test[, numeric_vars]
+
+train_x_scaled <- scale(train_x)
+test_x_scaled <- scale(
+  test_x,
+  center = attr(train_x_scaled, "scaled:center"),
+  scale  = attr(train_x_scaled, "scaled:scale")
+)
+
+train_y <- bank_train$y
+test_y  <- bank_test$y
+
+best_k <- 5
+
+par(mfrow = c(1, 2))
+
+plot(
+  bank_full$age, bank_full$balance,
+  xlab = "Age", ylab = "Balance",
+  main = "Unscaled Features"
+)
+
+scaled_two <- scale(bank_full[, c("age", "balance")])
+
+plot(
+  scaled_two[, "age"], scaled_two[, "balance"],
+  xlab = "Scaled Age", ylab = "Scaled Balance",
+  main = "Scaled Features (mean = 0, sd = 1)"
+)
+
+par(mfrow = c(1, 1))
+
+i <- 1  
+test_point <- test_x_scaled[i, , drop = FALSE]
+
+distances <- apply(
+  train_x_scaled,
+  1,
+  function(row) sqrt(sum((row - test_point)^2))
+)
+
+nn_idx <- order(distances)[1:best_k]
+
+knn_demo_pred <- knn(
+  train = train_x_scaled,
+  test  = test_point,
+  cl    = train_y,
+  k     = best_k
+)
+
+cat("Test customer index:", i, "\n")
+cat("KNN predicted class:", knn_demo_pred, "\n")
+cat("True class:", test_y[i], "\n\n")
+
+cat("Neighbor outcome breakdown:\n")
+print(table(train_y[nn_idx]))
+
+cat("\nNearest neighbor details:\n")
+print(head(bank_train[nn_idx, c("age", "balance", "duration", "campaign", "y")]))
+
+```
+```{r}
+library(class)
+
+numeric_vars <- names(bank_full)[sapply(bank_full, is.numeric)]
+numeric_vars <- setdiff(numeric_vars, "y")
+
+train_x <- bank_train[, numeric_vars, drop = FALSE]
+test_x  <- bank_test[, numeric_vars, drop = FALSE]
+
+train_x_scaled <- scale(train_x)
+test_x_scaled <- scale(
+  test_x,
+  center = attr(train_x_scaled, "scaled:center"),
+  scale  = attr(train_x_scaled, "scaled:scale")
+)
+
+train_y <- bank_train$y
+test_y  <- bank_test$y
+
+knn_pred <- knn(
+  train = train_x_scaled,
+  test  = test_x_scaled,
+  cl    = train_y,
+  k     = 5
+)
+
+knn_accuracy <- mean(knn_pred == test_y)
+knn_error <- 1 - knn_accuracy
+cat("KNN Test Accuracy:", round(knn_accuracy * 100, 2), "%\n")
+cat("KNN Test Error:", round(knn_error * 100, 2), "%\n")
+
+```
+```
 
 
 ## KNN 2/3: Hyperparameter Tuning 
 * **Discuss:** The sole hyperparameter, **$k$** (the number of neighbors), determines the model's complexity (i.e., the bias-variance trade-off).
 * **Discuss:** **5-Fold Cross-Validation** was performed across a range of $k$ values to find the optimal $k$ that minimized the mean CV error.
 * **Image/Plot Idea:** A plot showing **CV Test Error vs. $k$**, illustrating the U-shape curve where the optimal $k$ is selected.
+```{r}
+library(class)
+library(caret)
+
+set.seed(123)
+
+k_values <- 1:25                  
+cv_error <- numeric(length(k_values))
+
+folds <- createFolds(train_y, k = 5, returnTrain = FALSE)
+
+for (i in seq_along(k_values)) {
+  k <- k_values[i]
+  fold_err <- numeric(length(folds))
+  
+  for (j in seq_along(folds)) {
+    test_idx  <- folds[[j]]
+    train_idx <- setdiff(seq_along(train_y), test_idx)
+    
+    fold_train_x <- train_x_scaled[train_idx, , drop = FALSE]
+    fold_test_x  <- train_x_scaled[test_idx,  , drop = FALSE]
+    fold_train_y <- train_y[train_idx]
+    fold_test_y  <- train_y[test_idx]
+    
+    pred <- knn(
+      train = fold_train_x,
+      test  = fold_test_x,
+      cl    = fold_train_y,
+      k     = k
+    )
+    
+
+    fold_err[j] <- mean(pred != fold_test_y)
+  }
+  
+
+  cv_error[i] <- mean(fold_err)
+}
+
+best_k <- k_values[which.min(cv_error)]
+best_k
+plot(
+  k_values, cv_error,
+  type = "b",
+  xlab = "Number of neighbors (k)",
+  ylab = "5-fold CV Test Error",
+  main = "KNN: 5-fold CV Test Error vs k"
+)
+
+abline(v = best_k, lty = 2)  
+
+```
+
 
 
 ## KNN 3/3: Evaluation & Test Performance
@@ -261,6 +426,59 @@ metrics %>% kable()
 * **Discuss:** KNN generally provides a good intermediate balance—often capturing non-linearity better than LogReg but being less computationally expensive than boosting.
 * **Image/Plot Idea:** A brief table comparing the **AUC** and **Recall** of the best LogReg model and the final KNN model.
 
+```{r}
+library(pROC)
+library(caret)
+
+set.seed(123)
+
+knn_final <- knn(
+  train = train_x_scaled,
+  test  = test_x_scaled,
+  cl    = train_y,
+  k     = best_k,
+  prob  = TRUE
+)
+
+knn_prob_attr <- attr(knn_final, "prob")
+knn_prob_yes <- ifelse(knn_final == "yes", knn_prob_attr, 1 - knn_prob_attr)
+
+test_y_fac <- factor(test_y, levels = c("no", "yes"))
+
+knn_roc  <- roc(response = test_y_fac, predictor = knn_prob_yes, levels = c("no", "yes"))
+knn_auc  <- as.numeric(auc(knn_roc))
+
+knn_cm      <- confusionMatrix(knn_final, test_y_fac, positive = "yes")
+knn_recall  <- knn_cm$byClass["Recall"]
+
+
+
+logit_model <- glm(y ~ ., data = bank_train, family = binomial)
+
+logit_prob <- predict(logit_model, newdata = bank_test, type = "response")
+logit_pred <- ifelse(logit_prob >= 0.5, "yes", "no")
+logit_pred <- factor(logit_pred, levels = c("no", "yes"))
+
+logit_roc <- roc(response = test_y_fac, predictor = logit_prob, levels = c("no", "yes"))
+logit_auc <- as.numeric(auc(logit_roc))
+
+logit_cm     <- confusionMatrix(logit_pred, test_y_fac, positive = "yes")
+logit_recall <- logit_cm$byClass["Recall"]
+
+
+
+results <- data.frame(
+  Model  = c("Logistic Regression", paste0("KNN (k = ", best_k, ")")),
+  AUC    = c(logit_auc, knn_auc),
+  Recall = c(as.numeric(logit_recall), as.numeric(knn_recall))
+)
+
+results$AUC    <- round(results$AUC, 3)
+results$Recall <- round(results$Recall, 3)
+
+results
+
+```
 
 
 ---
@@ -271,18 +489,144 @@ metrics %>% kable()
 * **Discuss:** **Boosting** (e.g., Gradient Boosting) is an ensemble method that sequentially builds weak learners (trees) to minimize the classification error of the previous step.
 * **Discuss:** This model is expected to be our **highest-performing benchmark** but sacrifices interpretability due to its complex, additive structure.
 * **Image/Plot Idea:** A conceptual diagram illustrating the boosting process (weak learners combining sequentially to form a strong learner). 
+```{r}
+library(gbm)
+
+bank_train$y_num <- ifelse(bank_train$y == "yes", 1, 0)
+bank_test$y_num  <- ifelse(bank_test$y  == "yes", 1, 0)
+
+set.seed(123)
+
+boost_model <- gbm(
+  formula = y_num ~ . - y,       
+  data = bank_train,
+  distribution = "bernoulli",   
+  n.trees = 1000,                
+  interaction.depth = 3,         
+  shrinkage = 0.01,             
+  n.minobsinnode = 10,
+  verbose = FALSE
+)
+
+boost_prob <- predict(
+  boost_model,
+  newdata = bank_test,
+  n.trees = 1000,
+  type = "response"
+)
+
+boost_pred <- ifelse(boost_prob > 0.5, "yes", "no")
+
+boost_accuracy <- mean(boost_pred == bank_test$y)
+boost_error    <- 1 - boost_accuracy
+
+cat("Boosting Test Accuracy:", round(boost_accuracy * 100, 2), "%\n")
+cat("Boosting Test Error:",   round(boost_error * 100, 2), "%\n")
+
+plot(
+  boost_model$train.error,
+  type = "l",
+  xlab = "Number of Trees (Iterations)",
+  ylab = "Training Loss",
+  main = "Boosting: Sequential Error Reduction"
+)
+
+
+```
 
 
 ## Boosting 2/3: Hyperparameter Tuning 
 * **Discuss:** Multiple hyperparameters were tuned using **Cross-Validation**, including the **number of trees** (M), **interaction depth** (complexity of weak learners), and **learning rate** ($\eta$).
 * **Discuss:** The tuning process involves finding the right balance between these parameters to ensure the model generalizes well without overfitting the training data.
 * **Image/Plot Idea:** A plot showing the **Error Rate vs. Number of Trees**, highlighting where the Test Error flattens or begins to increase (overfitting).
+```{r}
+boost_model <- gbm(
+  formula = y_num ~ . - y,
+  data = bank_train,
+  distribution = "bernoulli",
+  n.trees = 1000,
+  interaction.depth = 3,
+  shrinkage = 0.01,
+  n.minobsinnode = 10,
+  verbose = FALSE
+)
 
+M_values <- seq(50, 1000, by = 50)
+test_error <- numeric(length(M_values))
+
+for (i in seq_along(M_values)) {
+  M <- M_values[i]
+  
+  prob_M <- predict(
+    boost_model,
+    newdata = bank_test,
+    n.trees = M,
+    type = "response"
+  )
+  
+  pred_M <- ifelse(prob_M > 0.5, "yes", "no")
+  test_error[i] <- mean(pred_M != bank_test$y)
+}
+
+best_idx <- which.min(test_error)
+best_M   <- M_values[best_idx]
+
+cat("Best number of trees based on Test Error:", best_M, "\n")
+
+plot(
+  M_values, test_error,
+  type = "b",
+  xlab = "Number of Trees (M)",
+  ylab = "Test Error",
+  main = "Boosting: Test Error vs Number of Trees"
+)
+
+abline(v = best_M, lty = 2) 
+
+```
 
 ## Boosting 3/3: Evaluation & Importance 
 * **Discuss:** The final Boosting model was evaluated on the **Test Set**. Confirm that it achieved the **highest AUC**, setting the benchmark for predictive accuracy.
 * **Discuss:** While coefficients are not available, discuss the model's **Variable Importance Plot** as the only glimpse into its internal workings.
 * **Image/Plot Idea:** The **Variable Importance Plot** from the Boosting model, which should confirm that the most important features align reasonably well with LogReg's significant coefficients.
+```{r}
+library(pROC)
+
+boost_prob <- predict(
+  boost_model,
+  newdata = bank_test,
+  n.trees = 1000,       
+  type = "response"
+)
+
+test_y_fac <- factor(bank_test$y, levels = c("no", "yes"))
+
+
+boost_roc <- roc(
+  response  = test_y_fac,
+  predictor = boost_prob,
+  levels    = c("no", "yes")
+)
+
+boost_auc <- as.numeric(auc(boost_roc))
+cat("Boosting Test AUC:", round(boost_auc, 3), "\n")
+
+
+vi <- summary(boost_model, plotit = FALSE)  
+
+
+top_n <- min(10, nrow(vi))
+vi_top <- vi[1:top_n, ]
+
+barplot(
+  height = vi_top$rel.inf,
+  names.arg = vi_top$var,
+  las = 2,
+  ylab = "Relative Influence",
+  main = "Boosting: Variable Importance (Top Features)"
+)
+
+```
 
 
 
