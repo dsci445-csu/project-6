@@ -14,6 +14,7 @@ library(caret)
 library(pROC)
 library(MASS)
 library(ggplot2)
+library(dplyr)
 
 set.seed(445) 
 
@@ -283,29 +284,167 @@ All three models yield a very similar AUC of approximately $0.90$. The ROC curve
 
 ---
 
-
-
-
-## 3.4 K-Nearest Neighbors (KNN)
 - Standardize numeric predictors.
 - Perform CV to tune **k** .
 - Report best k and corresponding CV error.
 - Discuss bias-variance behavior.
 
+
+## 3.4 K-Nearest Neighbors (KNN)
+KNN is a nonparametric method that relies on feature scaling and distance-based classification.
+
+Prepare scaled numeric predictors
+```{r}
+library(class)
+
+numeric_vars <- names(train_data)[sapply(train_data, is.numeric)]
+numeric_vars <- setdiff(numeric_vars, "residuals")
+
+train_x <- train_data[, numeric_vars]
+test_x  <- test_data[, numeric_vars]
+
+train_x_scaled <- scale(train_x)
+test_x_scaled <- scale(
+  test_x,
+  center = attr(train_x_scaled, "scaled:center"),
+  scale  = attr(train_x_scaled, "scaled:scale")
+)
+
+train_y <- train_data$y
+test_y  <- test_data$y
+
+```
+
+Cross-validation to choose the best k
+
+```{r}
+k_values <- seq(1, 25, 2)
+cv_accuracy <- numeric(length(k_values))
+
+set.seed(445)
+folds <- createFolds(train_y, k = 5)
+
+for (i in seq_along(k_values)) {
+  k <- k_values[i]
+  fold_acc <- c()
+  
+  for (f in folds) {
+    pred <- knn(
+      train = train_x_scaled[-f, ],
+      test  = train_x_scaled[f, ],
+      cl    = train_y[-f],
+      k = k
+    )
+    fold_acc <- c(fold_acc, mean(pred == train_y[f]))
+  }
+  
+  cv_accuracy[i] <- mean(fold_acc)
+}
+
+best_k <- k_values[which.max(cv_accuracy)]
+best_k
+
+```
+
+Final KNN prediction and metrics
+
+```{r}
+knn_pred <- knn(
+  train = train_x_scaled,
+  test  = test_x_scaled,
+  cl    = train_y,
+  k = best_k
+)
+
+cm_knn <- confusionMatrix(knn_pred, test_y, positive = "yes")
+cm_knn
+
+knn_prob <- as.numeric(knn_pred == "yes")
+roc_knn <- roc(test_y, knn_prob)
+auc_knn <- auc(roc_knn)
+auc_knn
+
+```
+
+
 ## 3.5 Generalized Additive Models (GAM)
-- Fit GAM with smoothing splines for continuous variables.
-- Use CV to choose smoothing parameters.
-- Examine partial effect plots for interpretability.
+
+GAM allows flexible nonlinear fits through smoothing splines.
+
+```{r}
+library(gam)
+
+gam_model <- gam(
+  y ~ s(age) + s(balance) + s(duration) + s(campaign) + s(previous),
+  data = train_data,
+  family = binomial
+)
+
+summary(gam_model)
+
+gam_prob <- predict(gam_model, test_data, type = "response")
+gam_pred <- ifelse(gam_prob > 0.5, "yes", "no") |> factor(levels = c("no","yes"))
+
+cm_gam <- confusionMatrix(gam_pred, test_y, positive = "yes")
+cm_gam
+
+roc_gam <- roc(test_y, gam_prob)
+auc_gam <- auc(roc_gam)
+auc_gam
+
+```
+
 
 ## 3.6 Boosting (Most Flexible Model)
-- Fit gradient boosting classifier (e.g., `gbm` or `xgboost`).
-- Use cross-validation for:
-  - number of trees,
-  - interaction depth,
-  - learning rate.
-- Discuss complexity vs interpretability tradeoff. This model will be our benchmark non-interpretable model to compare interpretable models fitted above.
+
+Boosting builds many small trees sequentially, improving mistakes made by prior trees.
+
+```{r}
+
+if ("residuals" %in% colnames(train_data)) {
+  train_data$residuals <- NULL
+}
+
+train_data$y_num <- ifelse(train_data$y == "yes", 1, 0)
+test_data$y_num  <- ifelse(test_data$y == "yes", 1, 0)
+
+library(gbm)
+set.seed(445)
+
+boost_model <- gbm(
+  y_num ~ . - y,         
+  data = train_data,
+  distribution = "bernoulli",
+  n.trees = 400,       
+  shrinkage = 0.01,
+  interaction.depth = 3,
+  bag.fraction = 0.5,
+  verbose = FALSE
+)
+
+best_trees <- gbm.perf(boost_model, method = "OOB", plot.it = FALSE)
+best_trees
+
+```
+
+Prediction + Metrics
+```{r}
+boost_prob <- predict(boost_model, test_data, n.trees = best_trees, type = "response")
+boost_pred <- factor(ifelse(boost_prob > 0.5, "yes", "no"), levels = c("no","yes"))
+
+cm_boost <- confusionMatrix(boost_pred, test_y, positive = "yes")
+cm_boost
+
+roc_boost <- roc(test_y, boost_prob)
+auc_boost <- auc(roc_boost)
+auc_boost
+
+```
+
+
 
 # 4. Results — Model Assessment & Comparison  
+
 
 ## 4.1 Test Set Performance
 For each model:
@@ -314,11 +453,68 @@ For each model:
   - Sensitivity / specificity (important for minority class)  
 - ROC curves and AUC  
 
+
+```{r}
+final_results <- data.frame(
+  Model = c("Logistic", "Ridge", "LASSO", "KNN", "GAM", "Boosting"),
+  Accuracy = c(
+    cm_baseline$overall["Accuracy"],
+    cm_ridge$overall["Accuracy"],
+    cm_lasso$overall["Accuracy"],
+    cm_knn$overall["Accuracy"],
+    cm_gam$overall["Accuracy"],
+    cm_boost$overall["Accuracy"]
+  ),
+  Sensitivity = c(
+    cm_baseline$byClass["Sensitivity"],
+    cm_ridge$byClass["Sensitivity"],
+    cm_lasso$byClass["Sensitivity"],
+    cm_knn$byClass["Sensitivity"],
+    cm_gam$byClass["Sensitivity"],
+    cm_boost$byClass["Sensitivity"]
+  ),
+  AUC = c(
+    auc(roc_baseline),
+    auc(roc_ridge),
+    auc(roc_lasso),
+    auc_knn,
+    auc_gam,
+    auc_boost
+  )
+)
+
+final_results
+
+```
+
+
 ## 4.2 Comparative Evaluation
 - Table summarizing all test-set performance metrics.
 - Visual comparison of ROC curves.
 - Discuss interpretability vs predictive quality.
 
+Combined ROC Curve
+```{r}
+roc_all <- rbind(
+  data.frame(fpr = 1 - roc_baseline$specificities, tpr = roc_baseline$sensitivities, Model = "Logistic"),
+  data.frame(fpr = 1 - roc_ridge$specificities,    tpr = roc_ridge$sensitivities,    Model = "Ridge"),
+  data.frame(fpr = 1 - roc_lasso$specificities,    tpr = roc_lasso$sensitivities,    Model = "LASSO"),
+  data.frame(fpr = 1 - roc_knn$specificities,      tpr = roc_knn$sensitivities,      Model = "KNN"),
+  data.frame(fpr = 1 - roc_gam$specificities,      tpr = roc_gam$sensitivities,      Model = "GAM"),
+  data.frame(fpr = 1 - roc_boost$specificities,    tpr = roc_boost$sensitivities,    Model = "Boosting")
+)
+
+ggplot(roc_all, aes(x = fpr, y = tpr, color = Model)) +
+  geom_line(size = 1) +
+  geom_abline(linetype = "dashed") +
+  labs(
+    title = "ROC Curve Comparison for All Models",
+    x = "False Positive Rate",
+    y = "True Positive Rate"
+  ) +
+  theme_minimal()
+
+```
 
 
 
