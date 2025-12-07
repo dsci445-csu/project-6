@@ -5,13 +5,14 @@ output: html_document
 
 load libraries and clean data
 
-```{r}
+```{r, results='hide'}
 library(readr)
 library(tidyverse)
 library(boot)
 library(glmnet)
 library(caret)
 library(pROC)
+library(MASS)
 library(ggplot2)
 
 set.seed(445) 
@@ -35,328 +36,249 @@ bank_full <- bank_full %>%
     loan = as.factor(loan),
     contact = as.factor(contact),
     month = as.factor(month),
-    poutcome = as.factor(poutcome))
+    poutcome = as.factor(poutcome)) %>% 
+  mutate(previously_contacted = as.factor(ifelse(pdays == -1, "no", "yes")))
 
 ```
 
+
+This initial phase is a crucial part of the modeling pipeline. This includes data cleaning, and the training/test split. The primary purpose of the training/test split is to perform an honest out-of-sample evaluation, a process where a model is fit exclusively on the training data and its performance is later assessed on the unseen test data to provide an estimate of the test error. Converting categorical variables to factors is necessary for R's statistical modeling functions, such as glm, to correctly interpret them as nominal predictors and create the appropriate dummy variables for inclusion in the model. The new previously_contacted variable also handles a common issue in this data set, where a value of -1 for pdays indicates the client was not previously contacted, effectively creating a binary feature.
 
 ## Train/Test split
-- Explain purpose of an honest out-of-sample evaluation.
-- k-fold CV, k=5
+To estimate the test error rate, the data is partitioned into a training set (80%) and a test set (20%). The model is fit only on the training data, and its performance is later evaluated on the unseen test data. The createDataPartition function is used to ensure a balanced split (stratified sampling) with respect to the response variable $Y$.
 
 ```{r}
-bank_full$previously_contacted <- factor(ifelse(bank_full$pdays == -1, "No", "Yes"), levels = c("No", "Yes"))
-bank_full$pdays_non_miss <- ifelse(bank_full$pdays == -1, NA, bank_full$pdays)
-
 train_index <- createDataPartition(bank_full$y, p = 0.8, list = FALSE, times = 1)
 train_data <- bank_full[train_index, ]
-test_data <- bank_full[-train_index, ]
+test_data  <- bank_full[-train_index, ]
+
+cat(paste("Training set size:", nrow(train_data), "\n"))
+cat(paste("Test set size:", nrow(test_data), "\n"))
 ```
 
 
-## subset selection
-- Backward step-wise elimination (ecalutes fit using AIC)
+# 2. Model Selection: Backward Step-wise Selection
+Model selection is employed to identify a parsimonious subset of predictors that minimizes the estimated test error. We use backward step-wise selection (Chapter 6), which starts with a full model containing all predictors and iteratively removes the variable that leads to the largest decrease (or smallest increase) in AIC (Akaike Information Criterion). AIC is an estimate of the test error, penalizing models with more predictors to favor simplicity.
+
+### Initial Feature Selection
+We first fit a full model, and then use the step() function to perform the selection based on AIC.
+
 
 ```{r}
-initial_formula <- y ~ age + job + marital + education + default + balance + housing + loan + 
-  contact + day + month + campaign + pdays + previous + poutcome + previously_contacted
+full_formula <- y ~ age + job + marital + education + default + balance + 
+  housing + loan + contact + day + month + duration + campaign + 
+  pdays + previous + poutcome + previously_contacted
 
-# Fit the model with maximum covaraints on the training set
-glm.full <- glm(initial_formula, data = train_data, family = binomial)
+glm.full <- glm(full_formula, data = train_data, family = "binomial")
 
-# Use the step function to perform backward elimination based on AIC
-glm.selected <- step(
-  glm.full, 
-  direction = "backward", 
-  trace = 0
-)
+# Perform backward selection
+glm.step <- step(glm.full, direction = "backward", trace = 0)
 
-selected_formula <- formula(glm.selected)
+
+selected_formula <- formula(glm.step)
 selected_formula
-
 ```
 
 
-    
+The aim of this process is to reduce the variance of the coefficient estimates by eliminating predictors that contribute little to the model's fit. The resulting selected_formula retains the most important predictors (job, housing, poutcome, duration, campaign) while eliminating others (age, default, pdays). Variables like duration (the time of the last contact) are known to be strong predictors, while pdays was made redundant by the engineered previously_contacted feature. The selected model aims for a better trade-off between bias (which may increase slightly by removing variables) and variance (which decreases, leading to a potentially lower overall test error).
+
+
+
+
+
+# 3. Baseline Logistic Regression Model
+We now fit the baseline model using the features identified through backward selection. Logistic regression (Chapter 4) models the probability of the response $Y=1$ (a 'yes' subscription) as:$$P(Y=1 | X) = \frac{e^{\beta_0 + \beta_1 X_1 + \dots + \beta_p X_p}}{1 + e^{\beta_0 + \beta_1 X_1 + \dots + \beta_p X_p}}$$The coefficients $\beta_j$ are interpreted as the change in the log-odds of a positive response associated with a one-unit increase in the predictor $X_j$.
 
 ```{r}
-
-interact_formula <- update(selected_formula, . ~ .^2) 
-
-# Fit the maximal interaction model (CAUTION: This can be slow and unstable with many factors)
-glm.full.interact <- glm(interact_formula, data = train_data, family = binomial)
-glm.full.interact.summary <- summary(glm.full.interact)
-```
-
-
-```{r}
-coef_table <- glm.full.interact.summary$coefficients
-coef_df <- as.data.frame(coef_table)
-
-sample(coef_df %>%  filter(`Pr(>|z|)`< 0.01))
-```
-
-job:contact
-job:month
-education:housing
-housing:month
-contact:month
-day:month
-month:poutcome
-
-
-```{r}
-interact_formula_significant <- y ~ job + marital + education + balance + housing + loan + contact + 
-  day + month + campaign + previous + poutcome + job:contact + job:month + education:housing + housing:month +
-  contact:month + day:month + month:poutcome
-  
-glm.full.interact_significant <- glm(interact_formula_significant, data = train_data, family = binomial)
-
-
-glm.interact.selected <- step(
-  glm.full.interact_significant, 
-  direction = "backward", 
-  trace = 1 
-)
-
-selected_interact_formula <- formula(glm.interact.selected)
-selected_interact_formula
-```
-
-
-
----
-
-# 3. Modeling 
-
-## 3.1 Logistic Regression (Baseline Model)
-- Fit logistic regression.
-- k-fold CV for estimated test error.
-- Assess linearity and consider interactions if appropriate.
-- Optional: **regularized logistic regression** (Ridge/Lasso) using CV-selected $\lambda$.
-
-
-
-
-*With step-wise feature selection* (our base line)
-
-```{r}
-# Re-fit the final selected model
-glm.baseline <- glm(selected_formula, data = train_data, family = binomial)
+glm.baseline <- glm(selected_formula, data = train_data, family = "binomial")
 summary(glm.baseline)
-
 ```
+
+Assessing Non-Linearity with Residuals
+A fundamental assumption in logistic regression is the linearity in the log-odds. We check this assumption for the continuous predictors by plotting the deviance residuals against the predictor values. Systematic deviation of the LOESS (locally estimated scatterplot smoothing) curve from zero suggests a need for a non-linear transformation or a more flexible model.
 
 
 ```{r}
-glm_out <- glm(y ~ job + marital + education + balance + housing + loan + contact + 
-    day + month + campaign + previous + poutcome,
-    data = bank_full,
-    family = binomial, # Or whatever family you used
-    x = TRUE,
-    model = TRUE
-)
+# Extract deviance residuals
+residuals <- residuals(glm.baseline, type = "deviance")
+train_data$residuals <- residuals
 
-cv.error.baseline <- cv.glm(
-    bank_full, #only include features that are fit
-    glm_out, K = 5)
 
-cv.error.baseline$delta[2]
+p1 <- ggplot(train_data, aes(x = balance, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess", color = "red", se = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "blue") +
+  labs(title = "Deviance Residuals vs. Balance",
+       y = "Deviance Residuals") +
+  theme_minimal()
+p1
 ```
+
+The plot of the deviance residuals against balance shows that the LOESS curve deviates non-trivially from the zero line. This non-flat pattern suggests that the relationship between balance and the log-odds is non-linear, violating a core assumption of the simple linear logistic regression. This systematic error (or high bias) indicates that the model's fit could be substantially improved by incorporating a non-linear transformation of balance, which would better capture the true underlying relationship.
 
 
 ```{r}
-glm.probs.baseline <- predict(glm.baseline, newdata = test_data, type = "response")
+glm.tran <- glm(y ~ job + marital + education + housing + loan + contact + 
+    day + month + duration + campaign + previous + poutcome + poly(balance, 4), data = train_data, family = "binomial")
+summary(glm.tran)
 
-glm.pred.baseline <- factor(ifelse(glm.probs.baseline > 0.5, "yes", "no"), levels = c("no", "yes"))
-confusionMatrix(glm.pred.baseline, test_data$y, positive = "yes")
 
+residuals <- residuals(glm.tran, type = "deviance")
+train_data$residuals <- residuals
+
+ggplot(train_data, aes(x = balance, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess", color = "red", se = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "blue") +
+  labs(title = "Deviance Residuals vs. Balance",
+       y = "Deviance Residuals") +
+  theme_minimal()
 ```
 
 
-- analysis of parameters and example predictions with interpretation
-
-
-residual plots (numeric features)... this will lead to inclusion of non-linear features
+### Cross-Validation 
+for Test Error EstimationTo obtain a reliable, low-variance estimate of the test error, we employ $K=5$ cross-validation (Chapter 5, Section 5.1.3) using the cv.glm() function. The cross-validated classification error rate is often used as a direct estimator of the true test error.
 
 ```{r}
-glm.resids <- residuals(glm.full, type = "deviance")
-
-# Function to plot residuals vs a numeric predictor
-plot_residuals_vs_predictor <- function(predictor_name, data, residuals) {
-  df <- data.frame(
-    Residuals = residuals,
-    Predictor = data[[predictor_name]]
-  ) %>% filter(!is.na(Predictor))
-  
-  p <- ggplot(df, aes(x = Predictor, y = Residuals)) +
-    geom_point(alpha = 0.3) +
-    geom_smooth(method = "loess", color = "red", se = FALSE) + # Add a smoothing line
-    geom_hline(yintercept = 0, linetype = "dashed", color = "blue") +
-    labs(
-      title = paste("Deviance Residuals vs.", predictor_name),
-      y = "Deviance Residuals",
-      x = predictor_name
-    ) +
-    theme_minimal()
-  print(p)
+cost <- function(r, pi) {
+  mean(r != (pi > 0.5))
 }
 
-# Plot residuals for key numeric features
-plot_residuals_vs_predictor("age", train_data, residuals(glm.full, type = "deviance"))
-plot_residuals_vs_predictor("balance", train_data, residuals(glm.full, type = "deviance"))
-```
-
-
-
-
-
-*polynomials logit reg (on Balance or other numeric variables)*
-- test models with transformations (polynomial or Log)
-- test models with interaction terms
-
-```{r}
-
-```
-
-
-```{r}
-glm.test.linearity <- glm(y ~ job + marital + education + balance + housing + loan + contact + 
-    day + month + campaign + previous + poutcome + I(balance^2), data = train_data, family = binomial)
-
-summary(glm.test.linearity)$coefficients["I(balance^2)", "Pr(>|z|)"]
-
-# Interaction: Test interaction between 'age' and 'campaign' (common drivers).
-glm.test.interaction <- glm(selected_formula, data = train_data, family = binomial)
-glm.test.interaction <- update(glm.test.interaction, . ~ . + age:campaign)
-
-print(anova(glm.full, glm.test.interaction, test = "Chisq"))
-```
-
-*Regularized logit reg*
-
-Ridge
-- test across lambda values (and plot) with mean CV test error
-- confussion matrix and roc curve
-
-```{r}
-full_predictors_formula <- y ~ age + job + marital + education + default + balance + housing + loan + 
-  contact + day + month + campaign + pdays + previous + poutcome + previously_contacted
-
-X_train_ridge <- model.matrix(full_predictors_formula, data = train_data)[, -1] 
-y_train_ridge <- train_data$y
-
-```
-
-k-fold CV for optimal lambda
-
-```{r}
-cv.ridge.fit <- cv.glmnet(
-  X_train_ridge, 
-  y_train_ridge, 
-  alpha = 0, 
-  family = "binomial", 
-  nfolds = 5
-) 
-
-lambda_min <- cv.ridge.fit$lambda.min
-lambda_min
-```
-
-fit using optimal lambda
-
-```{r}
-X_test_ridge <- model.matrix(full_predictors_formula, data = test_data)[, -1] 
-
-ridge.probs <- predict(cv.ridge.fit, newx = X_test_ridge, s = lambda_min, type = "response") %>%
-  as.vector()
-
-plot(cv.ridge.fit)
-
-ridge.pred <- factor(ifelse(ridge.probs > 0.5, "yes", "no"), levels = c("no", "yes"))
-confusionMatrix(ridge.pred, test_data$y, positive = "yes")
-```
-
-
-
-
-
-LASSO
-- test across lambda values (and plot) with mean CV test error
-- confussion matrix and roc curve
-
-```{r}
-X_train_lasso <- X_train_ridge
-y_train_lasso <- y_train_ridge
-```
-
-k-fold CV for optimal lambda
-
-```{r}
-cv.lasso.fit <- cv.glmnet(
-  X_train_lasso, 
-  y_train_lasso, 
-  alpha = 1, 
-  family = "binomial", 
-  nfolds = 5
-) 
-
-lambda_min_lasso <- cv.lasso.fit$lambda.min
-lambda_min_lasso
-
-
-plot(cv.lasso.fit)
-title("LASSO CV Error vs. Log(Lambda)", line = 2.5)
-abline(v = log(lambda_min_lasso), col = "red", lty = 2) 
-
-```
-
-
-fit using optimal lambda
-
-```{r}
-X_test_lasso <- X_test_ridge # Use the same test design matrix
-
-lasso.probs <- predict(cv.lasso.fit, newx = X_test_lasso, s = lambda_min_lasso, type = "response") %>% 
-  as.vector()
-
-lasso.pred <- factor(ifelse(lasso.probs > 0.5, "yes", "no"), levels = c("no", "yes"))
-confusionMatrix(lasso.pred, test_data$y, positive = "yes")
-
-```
-
-
-
-
-
-
-*plot ROC curves and table confusion matrix for the above models*
-
-```{r}
-roc_baseline <- roc(test_data$y, glm.probs.baseline, direction = "<")
-roc_ridge <- roc(test_data$y, ridge.probs, direction = "<")
-
-
-roc_data <- tibble(
-  Specificity = c(roc_baseline$specificities, roc_ridge$specificities), # include the raw logit model
-  Sensitivity = c(roc_baseline$sensitivities, roc_ridge$sensitivities),
-  Model = c(rep(paste0("Baseline (AUC=", round(auc(roc_baseline), 3), ")"), length(roc_baseline$specificities)), 
-            rep(paste0("Ridge (AUC=", round(auc(roc_ridge), 3), ")"), length(roc_ridge$specificities)))
+cv.error.baseline <- cv.glm(
+  data = train_data, 
+  glmfit = glm.tran, 
+  cost = cost, 
+  K = 5
 )
 
-# Plot the ROC curves 
-ggplot(roc_data, aes(x = 1 - Specificity, y = Sensitivity, color = Model)) +
-  geom_line(linewidth = 1) +
-  geom_abline(lty = 2, color = "gray50") + 
-  labs( title = "ROC Curve Comparison: Baseline vs. Ridge Logit",
-    x = "False Positive Rate (1 - Specificity)",
-    y = "True Positive Rate (Sensitivity)",
-    color = "Model") +
-  theme_minimal(base_size = 14) 
-
-
+cv_error_rate <- cv.error.baseline$delta[2]
+round(cv_error_rate, 5)
 ```
 
+The cross-validation process provides an estimate of the test error without requiring us to use the final, pristine test set. The resulting $\mathbf{K}$-fold CV error rate of round(cv_error_rate, 5) serves as a key metric for model selection. This value represents the expected proportion of observations that would be misclassified by the baseline model if deployed on new data.
+
+
+# 4. Regularized Logistic Regression
+To further reduce the model's variance and potentially find a model with a lower test error—especially in the presence of many correlated predictors—we apply regularization (Chapter 6). We use the glmnet package, which requires a design matrix for predictors ($X$) and a vector for the response ($Y$).
+
+```{r}
+X_full <- model.matrix(y ~ . - 1, data = bank_full)
+Y_full <- as.numeric(bank_full$y) - 1 
+
+
+X_train <- X_full[train_index, ]
+Y_train <- Y_full[train_index] 
+
+X_test <- X_full[-train_index, ]
+Y_test <- Y_full[-train_index] 
+```
+
+
+### Ridge Regression ($\ell_2$ Penalty)
+Ridge regression uses an $\ell_2$ penalty ($\alpha=0$) to shrink the coefficient estimates towards zero. This is a form of shrinkage that helps with multicollinearity and reduces variance, but it does not perform feature selection (no coefficients are set exactly to zero). The optimal tuning parameter $\lambda$ is selected via cross-validation.
+
+```{r}
+cv.ridge <- cv.glmnet(X_train, Y_train, 
+                      alpha = 0, 
+                      family = "binomial", 
+                      type.measure = "class")
+lambda.min.ridge <- cv.ridge$lambda.min
+
+plot(cv.ridge)
+```
+
+The plot shows the cross-validated misclassification error (the measure of performance) as a function of $\log(\lambda)$. The $\lambda_{\min}$ chosen, which minimizes this cross-validated error, is r round(lambda.min.ridge, 5). This value represents the optimal level of shrinkage required to minimize the estimated test error. Note that Ridge regression does not set coefficients exactly to zero, meaning it retains all predictors but reduces the magnitude of their estimates.
+
+
+### LASSO Regression ($\ell_1$ Penalty)
+LASSO (Least Absolute Shrinkage and Selection Operator) regression uses an $\ell_1$ penalty ($\alpha=1$). A key property of the LASSO is that it forces the coefficients of some variables to be exactly zero, thereby performing automatic feature selection (Chapter 6).
+
+```{r}
+cv.lasso <- cv.glmnet(X_train, Y_train, 
+                      alpha = 1, 
+                      family = "binomial", 
+                      type.measure = "class")
+lambda.min.lasso <- cv.lasso$lambda.min
+
+plot(cv.lasso)
+```
+
+The LASSO plot similarly uses cross-validation to select the optimal $\lambda_{\min}$, r round(lambda.min.lasso, 5). Unlike Ridge, the LASSO is expected to yield a more parsimonious model by excluding irrelevant predictors entirely. 
+
+
+
+# 5. Model Assessment and Comparison
+The ultimate goal is to assess the performance of the three models (Baseline, Ridge, and LASSO) on the unseen test set. We focus on the classification error rate (or accuracy) and, crucially for this imbalanced dataset, the Sensitivity and Specificity (Chapter 4).
+
+### Test Set Predictions
+
+```{r}
+baseline_prob <- predict(glm.tran, newdata = test_data, type = "response")
+baseline_pred <- factor(ifelse(baseline_prob > 0.5, "yes", "no"), levels = c("no", "yes"))
+
+ridge_prob <- predict(cv.ridge, s = lambda.min.ridge, newx = X_test, type = "response")
+ridge_pred <- factor(ifelse(ridge_prob > 0.5, "yes", "no"), levels = c("no", "yes"))
+
+lasso_prob <- predict(cv.lasso, s = lambda.min.lasso, newx = X_test, type = "response")
+lasso_pred <- factor(ifelse(lasso_prob > 0.5, "yes", "no"), levels = c("no", "yes"))
+```
+
+
+### Confusion Matrices and Metrics
+The confusion matrix (Chapter 4) provides a detailed breakdown of the model's performance by counting True Positives (TP), True Negatives (TN), False Positives (FP), and False Negatives (FN).
+
+```{r}
+cm_baseline <- confusionMatrix(baseline_pred, test_data$y, positive = "yes")
+cm_ridge <- confusionMatrix(ridge_pred, test_data$y, positive = "yes")
+cm_lasso <- confusionMatrix(lasso_pred, test_data$y, positive = "yes")
+
+metrics <- data.frame(
+  Model = c("Baseline Logit", "Ridge Logit", "LASSO Logit"),
+  Accuracy = c(cm_baseline$overall['Accuracy'], cm_ridge$overall['Accuracy'], cm_lasso$overall['Accuracy']),
+  Sensitivity = c(cm_baseline$byClass['Sensitivity'], cm_ridge$byClass['Sensitivity'], cm_lasso$byClass['Sensitivity']),
+  Specificity = c(cm_baseline$byClass['Specificity'], cm_ridge$byClass['Specificity'], cm_lasso$byClass['Specificity'])
+)
+metrics
+```
+
+All three models exhibit a high overall Accuracy (around 0.89), which is expected given the significant class imbalance (Prevalence $\approx 0.11$). However, the critical metric, Sensitivity (the True Positive Rate for the minority class, 'yes'), is very low (around 0.17). This result, consistent across all three models, indicates that they struggle to correctly identify subscribers, leading to many False Negatives (FN). Conversely, the high Specificity (True Negative Rate $\approx 0.98$) means the models are excellent at identifying non-subscribers. The regularization methods (Ridge and LASSO) failed to provide any significant improvement in these metrics, suggesting that the primary limitation is one of high bias (due to insufficient flexibility) rather than high variance.
+
+
+### ROC Curve and AUC Comparison
+The Receiver Operating Characteristic (ROC) curve and the Area Under the Curve (AUC) (Chapter 4, Section 4.4) are threshold-independent measures of model discrimination. The AUC represents the probability that the model will rank a randomly chosen positive observation higher than a randomly chosen negative observation.
+
+```{r}
+roc_baseline <- roc(test_data$y, baseline_prob)
+roc_ridge <- roc(test_data$y, as.numeric(ridge_prob))
+roc_lasso <- roc(test_data$y, as.numeric(lasso_prob))
+
+roc_data <- data.frame(
+  fpr = c(1 - roc_baseline$specificities, 1 - roc_ridge$specificities, 1 - roc_lasso$specificities),
+  tpr = c(roc_baseline$sensitivities, roc_ridge$sensitivities, roc_lasso$sensitivities),
+  Model = factor(c(rep("Baseline Logit", length(roc_baseline$specificities)),
+                   rep("Ridge Logit", length(roc_ridge$specificities)),
+                   rep("LASSO Logit", length(roc_lasso$specificities))),
+                 levels = c("Baseline Logit", "Ridge Logit", "LASSO Logit"))
+)
+
+ggplot(roc_data, aes(x = fpr, y = tpr, color = Model)) +
+  geom_line(linewidth = 1) +
+  geom_abline(linetype = "dashed", color = "grey") +
+  labs(
+    title = "ROC Curve Comparison for Logistic Models",
+    x = "False Positive Rate (1 - Specificity)",
+    y = "True Positive Rate (Sensitivity)"
+  ) +
+  theme_minimal()
+
+auc_values <- data.frame(
+  Model = c("Baseline Logit", "Ridge Logit", "LASSO Logit"),
+  AUC = c(auc(roc_baseline), auc(roc_ridge), auc(roc_lasso))
+)
+auc_values
+```
+
+All three models yield a very similar AUC of approximately $0.90$. The ROC curves are virtually identical, demonstrating that both the Ridge and LASSO regularization penalties provided negligible improvement in the overall power of the model to distinguish between the two classes when compared to the simpler Baseline logistic regression. This consistent performance confirms the observation from the confusion matrices: while the logistic models are good at discrimination (AUC $> 0.5$), they lack the flexibility needed to substantially reduce the bias and improve the classification of the highly valuable minority class.
 
 
 ---

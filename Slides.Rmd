@@ -1,10 +1,157 @@
 ---
 title: "Statistical Machine Learning Models on A Bank Marketing dataset"
-subtitle: "Colorado State University, DSCI 445: Statistical Machine Learning, Dr.Andee Kaplan"
 author: "Sandra, Tigist, Mussa Hassen, Waddah"
-output: ioslides_presentation
+subtitle: 'Colorado State University, DSCI 445: Statistical Machine Learning, Dr.Andee
+  Kaplan'
+output:
+  ioslides_presentation: 
+    css: styles.css
+  
 ---
 
+```{r appendix, include=FALSE}
+library(readr)
+library(knitr)
+library(tidyverse)
+library(boot)
+library(glmnet)
+library(caret)
+library(pROC)
+library(MASS)
+library(ggplot2)
+
+set.seed(445) 
+
+bank_full <- read_delim("data/bank-full_1.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+bank_full$y <- factor(bank_full$y, levels = c("no", "yes"))
+
+
+bank_full <- bank_full %>%
+  mutate(
+    job = as.factor(job),
+    marital = as.factor(marital),
+    education = as.factor(education),
+    default = as.factor(default),
+    housing = as.factor(housing),
+    loan = as.factor(loan),
+    contact = as.factor(contact),
+    month = as.factor(month),
+    poutcome = as.factor(poutcome)) %>% 
+  mutate(previously_contacted = as.factor(ifelse(pdays == -1, "no", "yes")))
+
+train_index <- createDataPartition(bank_full$y, p = 0.8, list = FALSE, times = 1)
+train_data <- bank_full[train_index, ]
+test_data  <- bank_full[-train_index, ]
+
+cat(paste("Training set size:", nrow(train_data), "\n"))
+cat(paste("Test set size:", nrow(test_data), "\n"))
+
+
+full_formula <- y ~ age + job + marital + education + default + balance + 
+  housing + loan + contact + day + month + duration + campaign + 
+  pdays + previous + poutcome + previously_contacted
+
+glm.full <- glm(full_formula, data = train_data, family = "binomial")
+
+# Perform backward selection
+glm.step <- step(glm.full, direction = "backward", trace = 0)
+
+
+selected_formula <- formula(glm.step)
+selected_formula
+
+
+glm.baseline <- glm(selected_formula, data = train_data, family = "binomial")
+summary(glm.baseline)
+
+glm.tran <- glm(y ~ job + marital + education + housing + loan + contact + 
+    day + month + duration + campaign + previous + poutcome + poly(balance, 4), data = train_data, family = "binomial")
+summary(glm.tran)
+
+
+residuals <- residuals(glm.tran, type = "deviance")
+train_data$residuals <- residuals
+
+cost <- function(r, pi) {
+  mean(r != (pi > 0.5))
+}
+
+cv.error.baseline <- cv.glm(
+  data = train_data, 
+  glmfit = glm.tran, 
+  cost = cost, 
+  K = 5
+)
+
+cv_error_rate <- cv.error.baseline$delta[2]
+round(cv_error_rate, 5)
+
+X_full <- model.matrix(y ~ . - 1, data = bank_full)
+Y_full <- as.numeric(bank_full$y) - 1 
+
+
+X_train <- X_full[train_index, ]
+Y_train <- Y_full[train_index] 
+
+X_test <- X_full[-train_index, ]
+Y_test <- Y_full[-train_index] 
+
+cv.ridge <- cv.glmnet(X_train, Y_train, 
+                      alpha = 0, 
+                      family = "binomial", 
+                      type.measure = "class")
+lambda.min.ridge <- cv.ridge$lambda.min
+
+
+cv.lasso <- cv.glmnet(X_train, Y_train, 
+                      alpha = 1, 
+                      family = "binomial", 
+                      type.measure = "class")
+lambda.min.lasso <- cv.lasso$lambda.min
+
+
+baseline_prob <- predict(glm.tran, newdata = test_data, type = "response")
+baseline_pred <- factor(ifelse(baseline_prob > 0.5, "yes", "no"), levels = c("no", "yes"))
+
+ridge_prob <- predict(cv.ridge, s = lambda.min.ridge, newx = X_test, type = "response")
+ridge_pred <- factor(ifelse(ridge_prob > 0.5, "yes", "no"), levels = c("no", "yes"))
+
+lasso_prob <- predict(cv.lasso, s = lambda.min.lasso, newx = X_test, type = "response")
+lasso_pred <- factor(ifelse(lasso_prob > 0.5, "yes", "no"), levels = c("no", "yes"))
+
+cm_baseline <- confusionMatrix(baseline_pred, test_data$y, positive = "yes")
+cm_ridge <- confusionMatrix(ridge_pred, test_data$y, positive = "yes")
+cm_lasso <- confusionMatrix(lasso_pred, test_data$y, positive = "yes")
+
+metrics <- data.frame(
+  Model = c("Baseline Logit", "Ridge Logit", "LASSO Logit"),
+  Accuracy = c(cm_baseline$overall['Accuracy'], cm_ridge$overall['Accuracy'], cm_lasso$overall['Accuracy']),
+  Sensitivity = c(cm_baseline$byClass['Sensitivity'], cm_ridge$byClass['Sensitivity'], cm_lasso$byClass['Sensitivity']),
+  Specificity = c(cm_baseline$byClass['Specificity'], cm_ridge$byClass['Specificity'], cm_lasso$byClass['Specificity'])
+)
+
+roc_baseline <- roc(test_data$y, baseline_prob)
+roc_ridge <- roc(test_data$y, as.numeric(ridge_prob))
+roc_lasso <- roc(test_data$y, as.numeric(lasso_prob))
+
+roc_data <- data.frame(
+  fpr = c(1 - roc_baseline$specificities, 1 - roc_ridge$specificities, 1 - roc_lasso$specificities),
+  tpr = c(roc_baseline$sensitivities, roc_ridge$sensitivities, roc_lasso$sensitivities),
+  Model = factor(c(rep("Baseline Logit", length(roc_baseline$specificities)),
+                   rep("Ridge Logit", length(roc_ridge$specificities)),
+                   rep("LASSO Logit", length(roc_lasso$specificities))),
+                 levels = c("Baseline Logit", "Ridge Logit", "LASSO Logit"))
+)
+
+
+auc_values <- data.frame(
+  Model = c("Baseline Logit", "Ridge Logit", "LASSO Logit"),
+  AUC = c(auc(roc_baseline), auc(roc_ridge), auc(roc_lasso))
+)
+
+```
 
 
 ## Project Motivation & Business Problem
@@ -40,24 +187,58 @@ output: ioslides_presentation
 [Image of a data science workflow diagram]
 
 
-## LogReg 1/3: Feature Selection & Linearity  #MUSSA
-* **Discuss:** Initial feature selection was performed using **Backward Stepwise Elimination** (based on **AIC**) on the full model to find the most parsimonious set of main effects.
-* **Discuss:** **Deviance Residual Plots** were used to assess the linearity assumption for numeric predictors (e.g., `age`, `balance`). This led to testing non-linear terms.
-* **Image/Plot Idea:** The **Residual Plot** for a key numeric feature (e.g., `balance`), showing a curve suggesting non-linearity.
+
+## LogReg: Feature Selection & Linearity  #MUSSA
+* Initial feature selection was performed using **Backward Stepwise Elimination** on the full model to find the most useful set of main effects.
+* Our selected formula resutled: 
+
+$y \sim job + marital + education + balance + housing + $
+
+$loan + contact + day + month + duration + $
+
+$campaign + previous+ poutcome$
+* **Residual Plots** were used to assess the linearity assumption for numeric predictors (`age`, `balance`). This led to testing a model with non-linear terms.
+
+---
+
+```{r residuals_slide, echo=FALSE, results='asis'}
+residuals <- residuals(glm.baseline, type = "deviance")
+train_data$residuals <- residuals
+
+ggplot(train_data, aes(x = balance, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess", color = "red", se = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "blue") +
+  labs(title = "Deviance Residuals vs. Balance",
+       y = "Deviance Residuals") +
+  theme_minimal()
+```
 
 
-## LogReg 2/3: Regularization & Tuning   #MUSSA
-* **Discuss:** We explored **Ridge ($\alpha=0$)** and **LASSO ($\alpha=1$) Regularization** to manage model complexity and feature selection, particularly with the large number of dummy variables.
-* **Discuss:** **5-Fold Cross-Validation** was used to select the optimal penalty parameter, $\lambda$, which minimized the mean CV error for each regularized model.
-* **Image/Plot Idea:** A plot showing the **CV Error vs. $\text{Log}(\lambda)$** for the LASSO model, highlighting the optimal $\lambda_{min}$.
+## LogReg: Models with non-linear components and interactions
+* A **quadratic term** $I(\text{balance}^4)$—was added to the formula to reduce the model's bias.
+* We then tested for crucial **interaction terms** (between campaign features and demographics). 
+* Our model had a cross-validated test error rate 0.09846
 
 
-## LogReg 3/3: Evaluation & Coefficients  #MUSSA
-* **Discuss:** The final selected LogReg model (likely the best regularized version) was evaluated on the held-out **Test Set**. Metrics focused on **AUC** and **Recall**.
-* **Discuss:** Analyze the **Coefficients** of the best interpretable model, highlighting variables with large magnitudes (e.g., `duration`, `poutcome`) for actionable insight.
-* **Image/Plot Idea:** The **Confusion Matrix** for the best LogReg model, showing the trade-off between True Positives and False Negatives.
+## LogReg: Regularization & Tuning   #MUSSA
+* We explored Ridge and LASSO regularization as an alternative approach for feature selection.
+* **5-Fold Cross-Validation** was used to select the optimal penalty parameter, $\lambda$, which minimized the mean CV error for each regularized model.
 
+```{r, echo=FALSE, results='asis', fig.width=4, fig.height=3}
 
+plot(cv.ridge) 
+plot(cv.lasso)
+```
+
+## LogReg: Evaluation & Coefficients  #MUSSA
+* The final selected LogReg model was evaluated on the 5-fold CV error rate, along with metrics focused on the confusion matrix.
+* Models performed relatively similar. We would prefer a model with higher **sensitivity** (few false negatives)
+
+```{r, echo=FALSE, results='asis'}
+metrics$AUC <- auc_values[, ncol(auc_values)]
+metrics %>% kable()
+```
 
 ---
 # 2. K-Nearest Neighbors (KNN) Model
@@ -105,24 +286,18 @@ output: ioslides_presentation
 
 
 
----
 
-## Results: Comparative Evaluation (Slide 13)
+## Results: Comparative Evaluation (Slide 13). #MUSSA
 * **Discuss:** Present the **Final Summary Table** comparing the Test Set performance (AUC, Recall, Accuracy) of all models (**Best LogReg**, **KNN**, **Boosting**).
 * **Discuss:** Visually compare the models using the **Combined ROC Curve Plot** and discuss which model dominates the space.
 * **Image/Plot Idea:** The **Combined ROC Curve Plot** comparing all three final models (LogReg, KNN, and Boosting). 
 
 
 
-## Discussion: The Trade-Off (Slide 14)  
+## The Trade-Off / Business Impact  #MUSSA
 * **Discuss:** Reiterate the central trade-off: **Boosting** is the best *predictor*, but the **Regularized Logistic Regression** offers the most *interpretable* and *actionable* insights for the bank.
 * **Discuss:** Final actionable advice for the bank: use **LogReg insights** to design campaigns and **Boosting** for a final scoring model if maximum predictive accuracy is needed.
 * **Image/Plot Idea:** A visual metaphor (e.g., a scale or seesaw) contrasting "High Performance" vs. "High Interpretability."
-
----
-
-
-## Discussion: Business Impact (Slide 13)  #MUSSA
 * **Discuss:** How the **chosen model** (Balancing performance and interpretability) can lead to **cost savings** and **higher ROI** for future campaigns.
 * **Discuss:** Briefly touch upon **regulatory/ethical implications** in banking and the need to justify predictions (further supporting the value of interpretability).
 * **Image/Plot Idea:** A currency symbol or a bar chart showing the conceptual increase in ROI due to better targeting.
@@ -131,7 +306,6 @@ output: ioslides_presentation
 ## Discussion: Limitations & Future Work (Slide 14)  #MUSSA
 * **Discuss:** Acknowledge limitations, such as not using **time-series analysis** or fully accounting for the dependency of the 'duration' feature.
 * **Discuss:** Suggest future improvements: Exploring advanced techniques like **resampling methods** (SMOTE) to handle imbalance better or trying **Deep Learning** models.
-* **Image/Plot Idea:** A bulleted list of 2-3 **future research questions** (e.g., Time-Series, SMOTE, Deep Learning).
 
 
 ## References (Slide 15)
@@ -139,4 +313,6 @@ output: ioslides_presentation
 * **Discuss:** Provide contact information for questions.
 * Thank you
 * **Image/Plot Idea:** The official UCI ML Repository logo and your contact email.
+
+
 
