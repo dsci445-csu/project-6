@@ -1,0 +1,376 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+  ignorenonframetext,
+]{beamer}
+\newif\ifbibliography
+\usepackage{pgfpages}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{caption label separator}{: }
+\setbeamercolor{caption name}{fg=normal text.fg}
+\beamertemplatenavigationsymbolsempty
+% remove section numbering
+\setbeamertemplate{part page}{
+  \centering
+  \begin{beamercolorbox}[sep=16pt,center]{part title}
+    \usebeamerfont{part title}\insertpart\par
+  \end{beamercolorbox}
+}
+\setbeamertemplate{section page}{
+  \centering
+  \begin{beamercolorbox}[sep=12pt,center]{section title}
+    \usebeamerfont{section title}\insertsection\par
+  \end{beamercolorbox}
+}
+\setbeamertemplate{subsection page}{
+  \centering
+  \begin{beamercolorbox}[sep=8pt,center]{subsection title}
+    \usebeamerfont{subsection title}\insertsubsection\par
+  \end{beamercolorbox}
+}
+% Prevent slide breaks in the middle of a paragraph
+\widowpenalties 1 10000
+\raggedbottom
+\AtBeginPart{
+  \frame{\partpage}
+}
+\AtBeginSection{
+  \ifbibliography
+  \else
+    \frame{\sectionpage}
+  \fi
+}
+\AtBeginSubsection{
+  \frame{\subsectionpage}
+}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Statistical Machine Learning Models on A Bank Marketing dataset},
+  pdfauthor={Sandra, Tigist, Mussa, Waddah},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Statistical Machine Learning Models on A Bank Marketing dataset}
+\subtitle{Colorado State University, DSCI 445: Statistical Machine
+Learning, Dr.Andee Kaplan}
+\author{Sandra, Tigist, Mussa, Waddah}
+
+\begin{document}
+\frame{\titlepage}
+
+\begin{frame}{Project Motivation \& Business Problem}
+\protect\phantomsection\label{project-motivation-business-problem}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} The bank's need for \textbf{efficient marketing} and
+  the high cost of telemarketing campaigns. The goal is to maximize the
+  success rate by predicting customer subscription.
+\item
+  \textbf{Discuss:} The challenge of the \textbf{rare positive class}
+  (imbalanced data) and why prediction accuracy is crucial for
+  \textbf{resource allocation}.
+\item
+  \textbf{Image/Plot Idea:} A simple, high-level infographic of a
+  marketing campaign funnel, highlighting the bottleneck/drop-off point.
+\end{itemize}
+
+{[}Image of a marketing funnel illustrating customer conversion{]}
+\end{frame}
+
+\begin{frame}{The Bank Marketing Dataset (Slide 2)}
+\protect\phantomsection\label{the-bank-marketing-dataset-slide-2}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} The dataset structure: \(\approx 45,000\) client
+  observations from a Portuguese banking institution's telemarketing
+  campaigns.
+\item
+  \textbf{Discuss:} Brief overview of the \textbf{four main predictor
+  categories}: Demographics, Financial Indicators, Campaign Features,
+  and Past Outcomes.
+\item
+  \textbf{Image/Plot Idea:} A small table summarizing the number of
+  observations and the list of the 4 key variable groups (e.g.,
+  Demographics, Financial, Campaign, Past).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Target Variable \& Class Imbalance (Slide 3)}
+\protect\phantomsection\label{target-variable-class-imbalance-slide-3}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} The \textbf{Target Variable (\(y\))} is binary: Did
+  the client subscribe to a term deposit (Yes/No)?
+\item
+  \textbf{Discuss:} Emphasize the severity of the \textbf{class
+  imbalance} (e.g., typically \(\approx 11\%\) `Yes' subscriptions).
+  This means models must be evaluated beyond simple accuracy.
+\item
+  \textbf{Image/Plot Idea:} A \textbf{Bar Plot} showing the distribution
+  of the target variable (\(y\)), visually highlighting the imbalance.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Problem Statement \& Key Assumptions (Slide 4)}
+\protect\phantomsection\label{problem-statement-key-assumptions-slide-4}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} The project goal is \textbf{Binary Classification}:
+  Building statistical models that are both \textbf{predictive} and
+  \textbf{interpretable} for management.
+\item
+  \textbf{Discuss:} Two key assumptions: Data observations are
+  \textbf{independent} (no time-series methods), and we focus on
+  \textbf{course-covered models} for direct comparison.
+\item
+  \textbf{Image/Plot Idea:} An icon representing \textbf{Predictive
+  Power} next to an icon representing \textbf{Interpretability} (The two
+  core goals).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Methodology: Data Preparation (Slide 5)}
+\protect\phantomsection\label{methodology-data-preparation-slide-5}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} \textbf{Data Wrangling} involved converting
+  categorical variables to factors and strategies for handling `unknown'
+  levels (treating them as a separate category vs.~missing).
+\item
+  \textbf{Discuss:} Established a \textbf{train/test split} (e.g.,
+  70/30) to ensure models are evaluated on unseen data for a fair
+  comparison of out-of-sample error.
+\item
+  \textbf{Image/Plot Idea:} A simple flow chart showing: Raw Data
+  \(\rightarrow\) Wrangling/Cleaning \(\rightarrow\) Train/Test Split.
+\end{itemize}
+
+{[}Image of a data science workflow diagram{]}
+\end{frame}
+
+\begin{frame}{Methodology: Models Selected (Slide 6)}
+\protect\phantomsection\label{methodology-models-selected-slide-6}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} \textbf{Logistic Regression:} Chosen for its
+  \textbf{linearity} and \textbf{high interpretability} (provides clear
+  marketing insights via coefficients).
+\item
+  \textbf{Discuss:} \textbf{K-Nearest Neighbors (KNN):} A
+  \textbf{non-parametric} and \textbf{flexible} model to capture
+  non-linearities, though sensitive to scale.
+\item
+  \textbf{Image/Plot Idea:} A side-by-side visual comparing the
+  conceptual difference between a linear boundary (LogReg) and a local,
+  non-linear one (KNN).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Methodology: Ensemble/Advanced Models (Slide 7)}
+\protect\phantomsection\label{methodology-ensembleadvanced-models-slide-7}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} \textbf{Boosting (e.g., AdaBoost/Gradient
+  Boosting):} An ensemble method expected to provide the \textbf{highest
+  predictive accuracy} by sequentially correcting errors of weak
+  learners.
+\item
+  \textbf{Discuss:} \textbf{Model Training Strategy:} All models used
+  \textbf{k-fold Cross-Validation} (CV) on the training set to prevent
+  overfitting and select optimal hyperparameters.
+\item
+  \textbf{Image/Plot Idea:} A conceptual diagram illustrating the
+  boosting process (e.g., weak learners combining to form a strong
+  learner).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Model Tuning \& Validation Details (Slide 8)}
+\protect\phantomsection\label{model-tuning-validation-details-slide-8}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} Mentioned specific tuning steps:
+  \textbf{Hyperparameter tuning} (e.g., finding optimal \(k\) for KNN)
+  and \textbf{Feature Selection} (e.g., stepwise for LogReg) to simplify
+  models.
+\item
+  \textbf{Discuss:} For models like LogReg, we also explored
+  \textbf{Regularization} (Ridge/Lasso) to prevent overfitting and
+  improve generalization.
+\item
+  \textbf{Image/Plot Idea:} A plot showing CV error vs.~\(k\) (for KNN)
+  or \(\lambda\) (for Lasso/Ridge) to demonstrate hyperparameter
+  selection.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Results: Model Evaluation Metrics (Slide 9)}
+\protect\phantomsection\label{results-model-evaluation-metrics-slide-9}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} Primary metrics are \textbf{Test Error Rate} and
+  \textbf{AUC (Area Under the ROC Curve)}, which are robust to class
+  imbalance.
+\item
+  \textbf{Discuss:} Also emphasize \textbf{Recall} (sensitivity) because
+  identifying the few `Yes' subscribers is more critical than high
+  accuracy on the majority `No' class.
+\item
+  \textbf{Image/Plot Idea:} A visual diagram of a \textbf{Confusion
+  Matrix}, highlighting the meaning of True Positives (TP) and False
+  Negatives (FN).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Results: Performance Comparison (Slide 10)}
+\protect\phantomsection\label{results-performance-comparison-slide-10}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} Present the \textbf{final performance comparison},
+  identifying the model with the lowest Test Error/Highest AUC (e.g.,
+  \textbf{Boosting}).
+\item
+  \textbf{Discuss:} Acknowledge the trade-off: The \textbf{best
+  predictive model} may not be the \textbf{most interpretable}.
+\item
+  \textbf{Image/Plot Idea:} A \textbf{Table} or \textbf{Bar Chart}
+  summarizing AUC, Accuracy, and Recall for \textbf{Logistic
+  Regression}, \textbf{KNN}, and \textbf{Boosting}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Results: ROC Curve Analysis (Slide 11)}
+\protect\phantomsection\label{results-roc-curve-analysis-slide-11}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} A visual comparison of models using the
+  \textbf{Receiver Operating Characteristic (ROC) Curve}. A curve closer
+  to the top-left is better.
+\item
+  \textbf{Discuss:} This curve provides insight into how each model
+  balances the \textbf{True Positive Rate} (Recall) vs.~\textbf{False
+  Positive Rate}.
+\item
+  \textbf{Image/Plot Idea:} The final \textbf{ROC Curve plot} comparing
+  the performance of all tested models.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Discussion: Interpreting the Best Model (Slide 12)}
+\protect\phantomsection\label{discussion-interpreting-the-best-model-slide-12}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} Focus on the \textbf{most interpretable model
+  (Logistic Regression)}---what were the key coefficients/insights?
+  (e.g., `Duration of last contact' is a strong predictor).
+\item
+  \textbf{Discuss:} Discuss how these feature importances can be
+  directly translated into \textbf{actionable marketing strategies} for
+  the bank.
+\item
+  \textbf{Image/Plot Idea:} A \textbf{Feature Importance Plot} (for
+  Boosting) or a \textbf{Coefficient Plot} (for LogReg), highlighting
+  the top 3-5 most influential variables.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Discussion: Business Impact (Slide 13)}
+\protect\phantomsection\label{discussion-business-impact-slide-13}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} How the \textbf{chosen model} (Balancing performance
+  and interpretability) can lead to \textbf{cost savings} and
+  \textbf{higher ROI} for future campaigns.
+\item
+  \textbf{Discuss:} Briefly touch upon \textbf{regulatory/ethical
+  implications} in banking and the need to justify predictions (further
+  supporting the value of interpretability).
+\item
+  \textbf{Image/Plot Idea:} A currency symbol or a bar chart showing the
+  conceptual increase in ROI due to better targeting.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Discussion: Limitations \& Future Work (Slide 14)}
+\protect\phantomsection\label{discussion-limitations-future-work-slide-14}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} Acknowledge limitations, such as not using
+  \textbf{time-series analysis} or fully accounting for the dependency
+  of the `duration' feature.
+\item
+  \textbf{Discuss:} Suggest future improvements: Exploring advanced
+  techniques like \textbf{resampling methods} (SMOTE) to handle
+  imbalance better or trying \textbf{Deep Learning} models.
+\item
+  \textbf{Image/Plot Idea:} A bulleted list of 2-3 \textbf{future
+  research questions} (e.g., Time-Series, SMOTE, Deep Learning).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{References (Slide 15)}
+\protect\phantomsection\label{references-slide-15}
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Discuss:} Simply list the required references for the data
+  source and any major methodology papers.
+\item
+  \textbf{Discuss:} Provide contact information for questions.
+\item
+  \textbf{Image/Plot Idea:} The official UCI ML Repository logo and your
+  contact email.
+\end{itemize}
+\end{frame}
+
+\end{document}

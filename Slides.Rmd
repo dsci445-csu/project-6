@@ -1,5 +1,142 @@
 ---
-title: "Slides"
-output: html_document
+title: "Statistical Machine Learning Models on A Bank Marketing dataset"
+subtitle: "Colorado State University, DSCI 445: Statistical Machine Learning, Dr.Andee Kaplan"
+author: "Sandra, Tigist, Mussa Hassen, Waddah"
+output: ioslides_presentation
 ---
+
+
+
+## Project Motivation & Business Problem
+* **Discuss:** The bank's need for efficient marketing and the high cost of telemarketing campaigns. The goal is to maximize the success rate by predicting customer subscription.
+* **Discuss:** The challenge of less positive class (imbalanced data) and why prediction accuracy is crucial.
+* **Image/Plot Idea:** A simple, high-level info graphic of a marketing campaign funnel, highlighting the bottleneck/drop-off point. 
+
+[Image of a marketing funnel illustrating customer conversion]
+
+
+## The Bank Marketing Dataset (Slide 2)
+* **Discuss:** The dataset structure: $\approx 45,000$ client observations from a Portuguese banking institution's telemarketing campaigns.
+* **Discuss:** Brief overview of the four main predictor categories: Client Demographics, Financial Indicators, Campaign Features, and Past Outcomes. Mention the paper had more features, fro privacy reasons the public data set has less
+* **Discuss:** The Target Variable ($y$) is binary: Did the client subscribe to a term deposit (Yes/No)?
+* **Discuss:** Emphasize the severity of the class imbalance (e.g., typically $\approx 11\%$ 'Yes' subscriptions). This may yield higher false negatives.
+* **Image/Plot Idea:** A small table summarizing the list of the 4 key variable groups (e.g., Demographics, Financial, Campaign, Past). 
+* **Image/Plot Idea:** A **Bar Plot** showing the distribution of the target variable ($y$), visually highlighting the imbalance. 
+
+
+
+## Problem Statement & Methodology Overview (Slide 3)
+* **Discuss:** The project aims for a **Comparative Study**—comparing models based on two criteria: **Predictive Power** and **Interpretability**.
+* **Discuss:** The project goal is **Binary Classification**: Building statistical models that are both **predictive** and **interpretable** for management.
+* **Discuss:** Established an **80/20 Train/Test Split** and used **5-Fold Cross-Validation (CV)** on the training set for tuning and estimating out-of-sample error.
+* **Image/Plot Idea:** An icon representing **Predictive Power** next to an icon representing **Interpretability** (The two core goals).
+
+
+## Methodology: Data Preparation (Slide 5)
+* **Discuss:** **Data Wrangling** involved converting categorical variables to factors and strategies for handling 'unknown' levels (treating them as a separate category vs. missing).
+* **Image/Plot Idea:** A simple flow chart showing: Raw Data $\rightarrow$ Wrangling/Cleaning $\rightarrow$ Train/Test Split. 
+* **Image/Plot Idea:** Summary stats or informational plots
+
+[Image of a data science workflow diagram]
+
+
+## LogReg 1/3: Feature Selection & Linearity  #MUSSA
+* **Discuss:** Initial feature selection was performed using **Backward Stepwise Elimination** (based on **AIC**) on the full model to find the most parsimonious set of main effects.
+* **Discuss:** **Deviance Residual Plots** were used to assess the linearity assumption for numeric predictors (e.g., `age`, `balance`). This led to testing non-linear terms.
+* **Image/Plot Idea:** The **Residual Plot** for a key numeric feature (e.g., `balance`), showing a curve suggesting non-linearity.
+
+
+## LogReg 2/3: Regularization & Tuning   #MUSSA
+* **Discuss:** We explored **Ridge ($\alpha=0$)** and **LASSO ($\alpha=1$) Regularization** to manage model complexity and feature selection, particularly with the large number of dummy variables.
+* **Discuss:** **5-Fold Cross-Validation** was used to select the optimal penalty parameter, $\lambda$, which minimized the mean CV error for each regularized model.
+* **Image/Plot Idea:** A plot showing the **CV Error vs. $\text{Log}(\lambda)$** for the LASSO model, highlighting the optimal $\lambda_{min}$.
+
+
+## LogReg 3/3: Evaluation & Coefficients  #MUSSA
+* **Discuss:** The final selected LogReg model (likely the best regularized version) was evaluated on the held-out **Test Set**. Metrics focused on **AUC** and **Recall**.
+* **Discuss:** Analyze the **Coefficients** of the best interpretable model, highlighting variables with large magnitudes (e.g., `duration`, `poutcome`) for actionable insight.
+* **Image/Plot Idea:** The **Confusion Matrix** for the best LogReg model, showing the trade-off between True Positives and False Negatives.
+
+
+
+---
+# 2. K-Nearest Neighbors (KNN) Model
+---
+
+## KNN 1/3: Feature Preparation 
+* **Discuss:** **KNN** requires scaling: all numeric predictors were **standardized** (mean=0, SD=1) to prevent features with larger scales from dominating the distance calculation.
+* **Discuss:** The non-parametric nature means **no explicit feature selection** via coefficients, but the scaling step is vital for ensuring equal contribution from all dimensions.
+* **Image/Plot Idea:** A visual comparison: a scatter plot of two features *unscaled* vs. the same features *scaled/standardized*. 
+
+
+## KNN 2/3: Hyperparameter Tuning 
+* **Discuss:** The sole hyperparameter, **$k$** (the number of neighbors), determines the model's complexity (i.e., the bias-variance trade-off).
+* **Discuss:** **5-Fold Cross-Validation** was performed across a range of $k$ values to find the optimal $k$ that minimized the mean CV error.
+* **Image/Plot Idea:** A plot showing **CV Test Error vs. $k$**, illustrating the U-shape curve where the optimal $k$ is selected.
+
+
+## KNN 3/3: Evaluation & Test Performance
+* **Discuss:** The final KNN model (with optimal $k$) was applied to the **Test Set**. Evaluate performance using **AUC** and compare it to the LogReg models.
+* **Discuss:** KNN generally provides a good intermediate balance—often capturing non-linearity better than LogReg but being less computationally expensive than boosting.
+* **Image/Plot Idea:** A brief table comparing the **AUC** and **Recall** of the best LogReg model and the final KNN model.
+
+
+
+---
+# 3. Boosting Model (High Predictive Benchmark)
+---
+
+## Boosting 1/3: Model Formulation
+* **Discuss:** **Boosting** (e.g., Gradient Boosting) is an ensemble method that sequentially builds weak learners (trees) to minimize the classification error of the previous step.
+* **Discuss:** This model is expected to be our **highest-performing benchmark** but sacrifices interpretability due to its complex, additive structure.
+* **Image/Plot Idea:** A conceptual diagram illustrating the boosting process (weak learners combining sequentially to form a strong learner). 
+
+
+## Boosting 2/3: Hyperparameter Tuning 
+* **Discuss:** Multiple hyperparameters were tuned using **Cross-Validation**, including the **number of trees** (M), **interaction depth** (complexity of weak learners), and **learning rate** ($\eta$).
+* **Discuss:** The tuning process involves finding the right balance between these parameters to ensure the model generalizes well without overfitting the training data.
+* **Image/Plot Idea:** A plot showing the **Error Rate vs. Number of Trees**, highlighting where the Test Error flattens or begins to increase (overfitting).
+
+
+## Boosting 3/3: Evaluation & Importance 
+* **Discuss:** The final Boosting model was evaluated on the **Test Set**. Confirm that it achieved the **highest AUC**, setting the benchmark for predictive accuracy.
+* **Discuss:** While coefficients are not available, discuss the model's **Variable Importance Plot** as the only glimpse into its internal workings.
+* **Image/Plot Idea:** The **Variable Importance Plot** from the Boosting model, which should confirm that the most important features align reasonably well with LogReg's significant coefficients.
+
+
+
+---
+
+## Results: Comparative Evaluation (Slide 13)
+* **Discuss:** Present the **Final Summary Table** comparing the Test Set performance (AUC, Recall, Accuracy) of all models (**Best LogReg**, **KNN**, **Boosting**).
+* **Discuss:** Visually compare the models using the **Combined ROC Curve Plot** and discuss which model dominates the space.
+* **Image/Plot Idea:** The **Combined ROC Curve Plot** comparing all three final models (LogReg, KNN, and Boosting). 
+
+
+
+## Discussion: The Trade-Off (Slide 14)
+* **Discuss:** Reiterate the central trade-off: **Boosting** is the best *predictor*, but the **Regularized Logistic Regression** offers the most *interpretable* and *actionable* insights for the bank.
+* **Discuss:** Final actionable advice for the bank: use **LogReg insights** to design campaigns and **Boosting** for a final scoring model if maximum predictive accuracy is needed.
+* **Image/Plot Idea:** A visual metaphor (e.g., a scale or seesaw) contrasting "High Performance" vs. "High Interpretability."
+
+---
+
+
+## Discussion: Business Impact (Slide 13)
+* **Discuss:** How the **chosen model** (Balancing performance and interpretability) can lead to **cost savings** and **higher ROI** for future campaigns.
+* **Discuss:** Briefly touch upon **regulatory/ethical implications** in banking and the need to justify predictions (further supporting the value of interpretability).
+* **Image/Plot Idea:** A currency symbol or a bar chart showing the conceptual increase in ROI due to better targeting.
+
+
+## Discussion: Limitations & Future Work (Slide 14)
+* **Discuss:** Acknowledge limitations, such as not using **time-series analysis** or fully accounting for the dependency of the 'duration' feature.
+* **Discuss:** Suggest future improvements: Exploring advanced techniques like **resampling methods** (SMOTE) to handle imbalance better or trying **Deep Learning** models.
+* **Image/Plot Idea:** A bulleted list of 2-3 **future research questions** (e.g., Time-Series, SMOTE, Deep Learning).
+
+
+## References (Slide 15)
+* **Discuss:** Simply list the required references for the data source and any major methodology papers.
+* **Discuss:** Provide contact information for questions.
+* Thank you
+* **Image/Plot Idea:** The official UCI ML Repository logo and your contact email.
 
