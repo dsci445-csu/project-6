@@ -5,7 +5,7 @@ subtitle: 'Colorado State University, DSCI 445: Statistical Machine Learning, Dr
   Kaplan'
 output:
   ioslides_presentation:
-    css: styles.css
+    widescreen: true
 ---
 
 ```{r appendix, include=FALSE}
@@ -148,79 +148,6 @@ roc_data <- data.frame(
 auc_values <- data.frame(
   Model = c("Baseline Logit", "Ridge Logit", "LASSO Logit"),
   AUC = c(auc(roc_baseline), auc(roc_ridge), auc(roc_lasso))
-)
-
-
-## boosting 
-
-if ("residuals" %in% colnames(train_data)) {
-  train_data$residuals <- NULL
-}
-
-train_data$y_num <- ifelse(train_data$y == "yes", 1, 0)
-test_data$y_num  <- ifelse(test_data$y == "yes", 1, 0)
-
-library(gbm)
-set.seed(445)
-
-boost_model <- gbm(
-  y_num ~ . - y,         
-  data = train_data,
-  distribution = "bernoulli",
-  n.trees = 1500,       
-  shrinkage = 0.01,
-  interaction.depth = 3,
-  bag.fraction = 0.5,
-  verbose = FALSE
-)
-best_trees <- gbm.perf(boost_model, method = "OOB", plot.it = FALSE)
-
-
-boost_prob <- predict(boost_model, test_data, n.trees = best_trees, type = "response")
-boost_pred <- factor(ifelse(boost_prob > 0.5, "yes", "no"), levels = c("no","yes"))
-
-cm_boost <- confusionMatrix(boost_pred, test_y, positive = "yes")
-cm_boost
-
-roc_boost <- roc(test_y, boost_prob)
-auc_boost <- auc(roc_boost)
-
-## test 
-final_results <- data.frame(
-  Model = c("Logistic", "Ridge", "LASSO", "KNN", "GAM", "Boosting"),
-  Accuracy = c(
-    cm_baseline$overall["Accuracy"],
-    cm_ridge$overall["Accuracy"],
-    cm_lasso$overall["Accuracy"],
-    cm_knn$overall["Accuracy"],
-    cm_gam$overall["Accuracy"],
-    cm_boost$overall["Accuracy"]
-  ),
-  Sensitivity = c(
-    cm_baseline$byClass["Sensitivity"],
-    cm_ridge$byClass["Sensitivity"],
-    cm_lasso$byClass["Sensitivity"],
-    cm_knn$byClass["Sensitivity"],
-    cm_gam$byClass["Sensitivity"],
-    cm_boost$byClass["Sensitivity"]
-  ),
-  AUC = c(
-    auc(roc_baseline),
-    auc(roc_ridge),
-    auc(roc_lasso),
-    auc_knn,
-    auc_gam,
-    auc_boost
-  )
-)
-# combined ROC 
-roc_all <- rbind(
-  data.frame(fpr = 1 - roc_baseline$specificities, tpr = roc_baseline$sensitivities, Model = "Logistic"),
-  data.frame(fpr = 1 - roc_ridge$specificities,    tpr = roc_ridge$sensitivities,    Model = "Ridge"),
-  data.frame(fpr = 1 - roc_lasso$specificities,    tpr = roc_lasso$sensitivities,    Model = "LASSO"),
-  data.frame(fpr = 1 - roc_knn$specificities,      tpr = roc_knn$sensitivities,      Model = "KNN"),
-  data.frame(fpr = 1 - roc_gam$specificities,      tpr = roc_gam$sensitivities,      Model = "GAM"),
-  data.frame(fpr = 1 - roc_boost$specificities,    tpr = roc_boost$sensitivities,    Model = "Boosting")
 )
 
 ```
@@ -641,6 +568,80 @@ results
 # 3. Boosting Model (High Predictive Benchmark) (t)
 ---
 
+```{r}
+## boosting 
+
+if ("residuals" %in% colnames(train_data)) {
+  train_data$residuals <- NULL
+}
+
+train_data$y_num <- ifelse(train_data$y == "yes", 1, 0)
+test_data$y_num  <- ifelse(test_data$y == "yes", 1, 0)
+
+library(gbm)
+set.seed(445)
+
+boost_model <- gbm(
+  y_num ~ . - y,         
+  data = train_data,
+  distribution = "bernoulli",
+  n.trees = 1500,       
+  shrinkage = 0.01,
+  interaction.depth = 3,
+  bag.fraction = 0.5,
+  verbose = FALSE
+)
+best_trees <- gbm.perf(boost_model, method = "OOB", plot.it = FALSE)
+
+
+boost_prob <- predict(boost_model, test_data, n.trees = best_trees, type = "response")
+boost_pred <- factor(ifelse(boost_prob > 0.5, "yes", "no"), levels = c("no","yes"))
+
+cm_boost <- confusionMatrix(boost_pred, test_y, positive = "yes")
+cm_boost
+
+roc_boost <- roc(test_y, boost_prob)
+auc_boost <- auc(roc_boost)
+
+## test 
+final_results <- data.frame(
+  Model = c("Logistic", "Ridge", "LASSO", "KNN", "GAM", "Boosting"),
+  Accuracy = c(
+    cm_baseline$overall["Accuracy"],
+    cm_ridge$overall["Accuracy"],
+    cm_lasso$overall["Accuracy"],
+    cm_knn$overall["Accuracy"],
+    cm_gam$overall["Accuracy"],
+    cm_boost$overall["Accuracy"]
+  ),
+  Sensitivity = c(
+    cm_baseline$byClass["Sensitivity"],
+    cm_ridge$byClass["Sensitivity"],
+    cm_lasso$byClass["Sensitivity"],
+    cm_knn$byClass["Sensitivity"],
+    cm_gam$byClass["Sensitivity"],
+    cm_boost$byClass["Sensitivity"]
+  ),
+  AUC = c(
+    auc(roc_baseline),
+    auc(roc_ridge),
+    auc(roc_lasso),
+    auc_knn,
+    auc_gam,
+    auc_boost
+  )
+)
+# combined ROC 
+roc_all <- rbind(
+  data.frame(fpr = 1 - roc_baseline$specificities, tpr = roc_baseline$sensitivities, Model = "Logistic"),
+  data.frame(fpr = 1 - roc_ridge$specificities,    tpr = roc_ridge$sensitivities,    Model = "Ridge"),
+  data.frame(fpr = 1 - roc_lasso$specificities,    tpr = roc_lasso$sensitivities,    Model = "LASSO"),
+  data.frame(fpr = 1 - roc_knn$specificities,      tpr = roc_knn$sensitivities,      Model = "KNN"),
+  data.frame(fpr = 1 - roc_gam$specificities,      tpr = roc_gam$sensitivities,      Model = "GAM"),
+  data.frame(fpr = 1 - roc_boost$specificities,    tpr = roc_boost$sensitivities,    Model = "Boosting")
+)
+```
+
 ## Boosting 1/3: Model Formulation
 
 - Boosting builds many small trees sequentially, each fixing errors from the previous one.
@@ -810,25 +811,26 @@ barplot(
 
 
 
-## The Trade-Off / Business Impact  #MUSSA
-* **Discuss:** Reiterate the central trade-off: **Boosting** is the best *predictor*, but the **Regularized Logistic Regression** offers the most *interpretable* and *actionable* insights for the bank.
-* **Discuss:** Final actionable advice for the bank: use **LogReg insights** to design campaigns and **Boosting** for a final scoring model if maximum predictive accuracy is needed.
+## Business Impact
+* The central trade-off: Boosting is the best predictor, but the **Regularized Logistic Regression** offers the most *interpretable* and *actionable* insights for the bank.
+* Sample coefficients: $\beta_{Balance^2}$ = -23.02, $\beta_{Housing}$ = -0.65, $\beta_{JobStudent}$ = 4.064
+* The chosen model can lead to cost savings and higher ROI for future campaigns.
 * **Image/Plot Idea:** A visual metaphor (e.g., a scale or seesaw) contrasting "High Performance" vs. "High Interpretability."
-* **Discuss:** How the **chosen model** (Balancing performance and interpretability) can lead to **cost savings** and **higher ROI** for future campaigns.
-* **Discuss:** Briefly touch upon **regulatory/ethical implications** in banking and the need to justify predictions (further supporting the value of interpretability).
-* **Image/Plot Idea:** A currency symbol or a bar chart showing the conceptual increase in ROI due to better targeting.
 
 
-## Discussion: Limitations & Future Work (Slide 14)  #MUSSA
-* **Discuss:** Acknowledge limitations, such as not using **time-series analysis** or fully accounting for the dependency of the 'duration' feature.
-* **Discuss:** Suggest future improvements: Exploring advanced techniques like **resampling methods** (SMOTE) to handle imbalance better or trying **Deep Learning** models.
+## Discussion
+* Consideration: regulatory/ethical implications in banking and the need to justify predictions (further supporting the value of interpretability).
+* Advanced train/test splitting methods like **time-series analysis** were not used.
+* Suggest future improvements: Exploring advanced techniques like **resampling methods** (SMOTE) to handle imbalance better or trying.
 
 
-## References (Slide 15)
-* **Discuss:** Simply list the required references for the data source and any major methodology papers.
-* **Discuss:** Provide contact information for questions.
-* Thank you
-* **Image/Plot Idea:** The official UCI ML Repository logo and your contact email.
+## References
+* UC Irvine Machine Learning Repository. Bank Marketing. https://archive.ics.uci.edu/dataset/222/bank+marketing 
+* Github link: https://github.com/dsci445-csu/project-6
+
+```{r image, echo=FALSE, fig.align='center'}
+knitr::include_graphics("UCI.png")
+```
 
 
 
