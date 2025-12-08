@@ -248,7 +248,8 @@ metrics %>% kable()
 * **Discuss:** **KNN** requires scaling: all numeric predictors were **standardized** (mean=0, SD=1) to prevent features with larger scales from dominating the distance calculation.
 * **Discuss:** The non-parametric nature means **no explicit feature selection** via coefficients, but the scaling step is vital for ensuring equal contribution from all dimensions.
 * **Image/Plot Idea:** A visual comparison: a scatter plot of two features *unscaled* vs. the same features *scaled/standardized*. 
-```{r}
+```{r, echo=FALSE, results='asis'}
+
 library(dplyr)
 library(class)
 library(caret)
@@ -327,7 +328,7 @@ cat("\nNearest neighbor details:\n")
 print(head(bank_train[nn_idx, c("age", "balance", "duration", "campaign", "y")]))
 
 ```
-```{r}
+```{r, echo=FALSE, results='asis'}
 library(class)
 
 numeric_vars <- names(bank_full)[sapply(bank_full, is.numeric)]
@@ -366,7 +367,7 @@ cat("KNN Test Error:", round(knn_error * 100, 2), "%\n")
 * **Discuss:** The sole hyperparameter, **$k$** (the number of neighbors), determines the model's complexity (i.e., the bias-variance trade-off).
 * **Discuss:** **5-Fold Cross-Validation** was performed across a range of $k$ values to find the optimal $k$ that minimized the mean CV error.
 * **Image/Plot Idea:** A plot showing **CV Test Error vs. $k$**, illustrating the U-shape curve where the optimal $k$ is selected.
-```{r}
+```{r, echo=FALSE, results='asis'}
 library(class)
 library(caret)
 
@@ -426,7 +427,7 @@ abline(v = best_k, lty = 2)
 * **Discuss:** KNN generally provides a good intermediate balance—often capturing non-linearity better than LogReg but being less computationally expensive than boosting.
 * **Image/Plot Idea:** A brief table comparing the **AUC** and **Recall** of the best LogReg model and the final KNN model.
 
-```{r}
+```{r, echo=FALSE, results='asis'}
 library(pROC)
 library(caret)
 
@@ -489,7 +490,7 @@ results
 * **Discuss:** **Boosting** (e.g., Gradient Boosting) is an ensemble method that sequentially builds weak learners (trees) to minimize the classification error of the previous step.
 * **Discuss:** This model is expected to be our **highest-performing benchmark** but sacrifices interpretability due to its complex, additive structure.
 * **Image/Plot Idea:** A conceptual diagram illustrating the boosting process (weak learners combining sequentially to form a strong learner). 
-```{r}
+```{r, echo=FALSE, results='asis'}
 library(gbm)
 
 bank_train$y_num <- ifelse(bank_train$y == "yes", 1, 0)
@@ -539,7 +540,7 @@ plot(
 * **Discuss:** Multiple hyperparameters were tuned using **Cross-Validation**, including the **number of trees** (M), **interaction depth** (complexity of weak learners), and **learning rate** ($\eta$).
 * **Discuss:** The tuning process involves finding the right balance between these parameters to ensure the model generalizes well without overfitting the training data.
 * **Image/Plot Idea:** A plot showing the **Error Rate vs. Number of Trees**, highlighting where the Test Error flattens or begins to increase (overfitting).
-```{r}
+```{r, echo=FALSE, results='asis'}
 boost_model <- gbm(
   formula = y_num ~ . - y,
   data = bank_train,
@@ -589,7 +590,7 @@ abline(v = best_M, lty = 2)
 * **Discuss:** The final Boosting model was evaluated on the **Test Set**. Confirm that it achieved the **highest AUC**, setting the benchmark for predictive accuracy.
 * **Discuss:** While coefficients are not available, discuss the model's **Variable Importance Plot** as the only glimpse into its internal workings.
 * **Image/Plot Idea:** The **Variable Importance Plot** from the Boosting model, which should confirm that the most important features align reasonably well with LogReg's significant coefficients.
-```{r}
+```{r, echo=FALSE, results='asis'}
 library(pROC)
 
 boost_prob <- predict(
