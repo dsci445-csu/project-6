@@ -154,7 +154,7 @@ auc_values <- data.frame(
 ```
 
 
-## Project Motivation & Business Problem
+## Project Motivation & Business Problem 
 * **Discuss:** The bank's need for efficient marketing and the high cost of telemarketing campaigns. The goal is to maximize the success rate by predicting customer subscription.
 * **Discuss:** The challenge of less positive class (imbalanced data) and why prediction accuracy is crucial.
 * **Image/Plot Idea:** A simple, high-level info graphic of a marketing campaign funnel, highlighting the bottleneck/drop-off point. 
@@ -179,6 +179,8 @@ knitr::include_graphics("imbalance_plot.png")
 
 ## EDA Finding 1: Contact Method Matters
 
+* Cell phone calls perform best
+
 ```{r eda1-plot, echo=FALSE, fig.align="center", out.width="90%"}
 knitr::include_graphics("contact_plot.png")
 
@@ -186,11 +188,15 @@ knitr::include_graphics("contact_plot.png")
 
 ## EDA Finding 2: Previous Success Predicts Future Success
 
+* Past success predicts new success
+
 ```{r eda2-plot, echo=FALSE, fig.align="center", out.width="90%"}
 knitr::include_graphics("poutcome_plot.png")
 ```
 
 ## EDA Finding 3: Too Many Calls Hurts Results
+
+* More calls = worse results
 
 ```{r eda3-plot, echo=FALSE, fig.align="center", out.width="90%"}
 knitr::include_graphics("campaign_plot.png")
