@@ -153,21 +153,12 @@ auc_values <- data.frame(
 ```
 
 
-<<<<<<< HEAD
 ## Project Motivation & Business Problem (S)
 - Telemarketing campaigns are expensive, time-consuming, and have very low success rates. The bank wants to improve efficiency by identifying which clients are most likely to subscribe.
 - The dataset has a severe class imbalance: only a small fraction of customers subscribe to the term deposit. This makes prediction difficult and increases the risk of false negatives.
 - Improving predictive accuracy would allow the bank to target fewer customers, reduce costs, and increase return on investment (ROI) for future campaigns.
-=======
-## Project Motivation & Business Problem 
-* **Discuss:** The bank's need for efficient marketing and the high cost of telemarketing campaigns. The goal is to maximize the success rate by predicting customer subscription.
-* **Discuss:** The challenge of less positive class (imbalanced data) and why prediction accuracy is crucial.
-* **Image/Plot Idea:** A simple, high-level info graphic of a marketing campaign funnel, highlighting the bottleneck/drop-off point. 
->>>>>>> 1e461e928605f45b12df81c81104c34ebf17c3d4
 
-
----
-
+--- 
 ```{r, echo=FALSE}
 library(ggplot2)
 
@@ -315,37 +306,26 @@ metrics %>% kable()
 ```
 
 ---
-# 2. K-Nearest Neighbors (KNN) Model (t)
+# 2. K-Nearest Neighbors (KNN) Model
 ---
 
 ## KNN 1/3: Feature Preparation 
-- KNN relies on distance calculations, so all numeric features must be scaled to contribute equally.
-- Predictors were standardized (mean = 0, SD = 1) so large-range variables don't dominate the distance metric.
-- Because KNN is non-parametric and has no learned coefficients, scaling is essential to ensure fair weighting across features.
-- A before-and-after scatter plot highlights this: unscaled features have mismatched ranges, while standardized features align on comparable scales.
+* **KNN** requires scaling: all numeric predictors were **standardized** (mean=0, SD=1) to prevent features with larger scales from dominating the distance calculation.
+* The non-parametric nature means **no explicit feature selection** via coefficients, but the scaling step is vital for ensuring equal contribution from all dimensions.
 
----
+--- 
 
-```{r, echo=FALSE, results='asis'}
-
+```{r knn-prep, echo=FALSE, message=FALSE, warning=FALSE}
 library(dplyr)
 library(class)
 library(caret)
 
+# Use the same train/test split from appendix
+numeric_vars <- names(train_data)[sapply(train_data, is.numeric)]
+numeric_vars <- setdiff(numeric_vars, c("y_num", "residuals"))
 
-set.seed(123)
-train_index <- sample(nrow(bank_full), 0.8 * nrow(bank_full))
-bank_train <- bank_full[train_index, ]
-bank_test  <- bank_full[-train_index, ]
-
-numeric_vars <- names(bank_full)[sapply(bank_full, is.numeric)]
-numeric_vars <- setdiff(numeric_vars, "y")
-
-train_x <- bank_train[, numeric_vars, drop = FALSE]
-test_x  <- bank_test[, numeric_vars, drop = FALSE]
-
-train_x <- bank_train[, numeric_vars]
-test_x  <- bank_test[, numeric_vars]
+train_x <- train_data[, numeric_vars]
+test_x  <- test_data[, numeric_vars]
 
 train_x_scaled <- scale(train_x)
 test_x_scaled <- scale(
@@ -354,105 +334,43 @@ test_x_scaled <- scale(
   scale  = attr(train_x_scaled, "scaled:scale")
 )
 
-train_y <- bank_train$y
-test_y  <- bank_test$y
+train_y <- train_data$y
+test_y  <- test_data$y
 
-best_k <- 5
-
+# Visualization
 par(mfrow = c(1, 2))
-
 plot(
-  bank_full$age, bank_full$balance,
+  train_data$age, train_data$balance,
   xlab = "Age", ylab = "Balance",
   main = "Unscaled Features"
 )
 
-scaled_two <- scale(bank_full[, c("age", "balance")])
-
+scaled_two <- scale(train_data[, c("age", "balance")])
 plot(
   scaled_two[, "age"], scaled_two[, "balance"],
   xlab = "Scaled Age", ylab = "Scaled Balance",
-  main = "Scaled Features (mean = 0, sd = 1)"
+  main = "Scaled Features"
 )
-
 par(mfrow = c(1, 1))
 
-i <- 1  
-test_point <- test_x_scaled[i, , drop = FALSE]
-
-distances <- apply(
-  train_x_scaled,
-  1,
-  function(row) sqrt(sum((row - test_point)^2))
-)
-
-nn_idx <- order(distances)[1:best_k]
-
-knn_demo_pred <- knn(
-  train = train_x_scaled,
-  test  = test_point,
-  cl    = train_y,
-  k     = best_k
-)
-
-cat("Test customer index:", i, "\n")
-cat("KNN predicted class:", knn_demo_pred, "\n")
-cat("True class:", test_y[i], "\n\n")
-
-cat("Neighbor outcome breakdown:\n")
-print(table(train_y[nn_idx]))
-
-cat("\nNearest neighbor details:\n")
-print(head(bank_train[nn_idx, c("age", "balance", "duration", "campaign", "y")]))
-
-library(class)
-
-numeric_vars <- names(bank_full)[sapply(bank_full, is.numeric)]
-numeric_vars <- setdiff(numeric_vars, "y")
-
-train_x <- bank_train[, numeric_vars, drop = FALSE]
-test_x  <- bank_test[, numeric_vars, drop = FALSE]
-
-train_x_scaled <- scale(train_x)
-test_x_scaled <- scale(
-  test_x,
-  center = attr(train_x_scaled, "scaled:center"),
-  scale  = attr(train_x_scaled, "scaled:scale")
-)
-
-train_y <- bank_train$y
-test_y  <- bank_test$y
-
-knn_pred <- knn(
-  train = train_x_scaled,
-  test  = test_x_scaled,
-  cl    = train_y,
-  k     = 5
-)
-
-knn_accuracy <- mean(knn_pred == test_y)
-knn_error <- 1 - knn_accuracy
-cat("KNN Test Accuracy:", round(knn_accuracy * 100, 2), "%\n")
-cat("KNN Test Error:", round(knn_error * 100, 2), "%\n")
-
+# Calculate accuracy with k=5 for demonstration
+knn_pred_demo <- knn(train = train_x_scaled, test = test_x_scaled, cl = train_y, k = 5)
+knn_accuracy_demo <- mean(knn_pred_demo == test_y)
 ```
 
+**Test Accuracy (k=5):** `r round(knn_accuracy_demo * 100, 2)`%
+---
 
 ## KNN 2/3: Hyperparameter Tuning 
-- KNN’s only hyperparameter is k, which controls model complexity
---small k = flexible but high variance; large k = smoother but higher bias
-- Selecting the right k is essential, so we used 5-fold Cross-Validation across multiple k values.
-- The optimal k minimizes the mean CV error, typically seen as the bottom of a U-shaped error curve.
+* The sole hyperparameter, **$k$** (the number of neighbors), determines the model's complexity (i.e., the bias-variance trade-off).
+* **5-Fold Cross-Validation** was performed across a range of $k$ values to find the optimal $k$ that minimized the mean CV error.
 
 ---
 
-```{r, echo=FALSE}
-library(class)
-library(caret)
+```{r knn-tuning, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+set.seed(445)
 
-set.seed(123)
-
-k_values <- 1:25                  
+k_values <- seq(1, 25, by = 2)
 cv_error <- numeric(length(k_values))
 
 folds <- createFolds(train_y, k = 5, returnTrain = FALSE)
@@ -477,43 +395,35 @@ for (i in seq_along(k_values)) {
       k     = k
     )
     
-
     fold_err[j] <- mean(pred != fold_test_y)
   }
   
-
   cv_error[i] <- mean(fold_err)
 }
 
 best_k <- k_values[which.min(cv_error)]
-best_k
+
 plot(
   k_values, cv_error,
   type = "b",
   xlab = "Number of neighbors (k)",
   ylab = "5-fold CV Test Error",
-  main = "KNN: 5-fold CV Test Error vs k"
+  main = "KNN: CV Test Error vs k"
 )
-
-abline(v = best_k, lty = 2)  
-
+abline(v = best_k, lty = 2, col = "red")
+text(best_k, max(cv_error), paste("Best k =", best_k), pos = 4, col = "red")
 ```
 
-
-
+**Optimal k:** `r best_k`
+--- 
 ## KNN 3/3: Evaluation & Test Performance
-- The final KNN model (using the optimized k) was evaluated on the Test Set using AUC and Recall.
-- KNN offers mid-level performance—capturing some non-linear patterns better than Logistic Regression while being simpler than Boosting.
-- Its AUC and Recall typically fall between LogReg and Boosting, making it a balanced, moderately interpretable model.
-- A small comparison table helps show where KNN stands relative to the other approaches.
+* The final KNN model (with optimal $k$) was applied to the **Test Set**. We evaluate performance using **AUC** and compare it to the LogReg models.
+* KNN generally provides a good intermediate balance—often capturing non-linearity better than LogReg but being less computationally expensive than boosting.
 
 ---
 
-```{r, echo=FALSE}
+```{r knn-results, echo=FALSE, message=FALSE, warning=FALSE}
 library(pROC)
-library(caret)
-
-set.seed(123)
 
 knn_final <- knn(
   train = train_x_scaled,
@@ -534,53 +444,47 @@ knn_auc  <- as.numeric(auc(knn_roc))
 knn_cm      <- confusionMatrix(knn_final, test_y_fac, positive = "yes")
 knn_recall  <- knn_cm$byClass["Recall"]
 
+cm_knn <- knn_cm
+roc_knn <- knn_roc
+auc_knn <- knn_auc 
 
 
-logit_model <- glm(y ~ ., data = bank_train, family = binomial)
-
-logit_prob <- predict(logit_model, newdata = bank_test, type = "response")
-logit_pred <- ifelse(logit_prob >= 0.5, "yes", "no")
-logit_pred <- factor(logit_pred, levels = c("no", "yes"))
-
-logit_roc <- roc(response = test_y_fac, predictor = logit_prob, levels = c("no", "yes"))
-logit_auc <- as.numeric(auc(logit_roc))
-
-logit_cm     <- confusionMatrix(logit_pred, test_y_fac, positive = "yes")
-logit_recall <- logit_cm$byClass["Recall"]
-
-
-
+# Results table
 results <- data.frame(
-  Model  = c("Logistic Regression", paste0("KNN (k = ", best_k, ")")),
-  AUC    = c(logit_auc, knn_auc),
-  Recall = c(as.numeric(logit_recall), as.numeric(knn_recall))
+  Model  = c("KNN", "Baseline Logit", "Ridge", "LASSO"),
+  AUC    = c(knn_auc, auc(roc_baseline), auc(roc_ridge), auc(roc_lasso)),
+  Sensitivity = c(as.numeric(knn_recall), 
+                  cm_baseline$byClass["Sensitivity"],
+                  cm_ridge$byClass["Sensitivity"],
+                  cm_lasso$byClass["Sensitivity"])
 )
 
-results$AUC    <- round(results$AUC, 3)
-results$Recall <- round(results$Recall, 3)
+results$AUC <- round(results$AUC, 3)
+results$Sensitivity <- round(results$Sensitivity, 3)
 
-results
-
+knitr::kable(results)
 ```
 
-
 ---
-# 3. Boosting Model (High Predictive Benchmark) (t)
+# 3. Boosting Model (High Predictive Benchmark)
 ---
+```{r boosting-setup, echo=FALSE, message=FALSE, warning=FALSE}
+library(gbm)
+library(pROC)
+library(caret)
 
-```{r}
-## boosting 
-
+# Clean up train_data if needed
 if ("residuals" %in% colnames(train_data)) {
   train_data$residuals <- NULL
 }
 
+# Create numeric response for boosting
 train_data$y_num <- ifelse(train_data$y == "yes", 1, 0)
 test_data$y_num  <- ifelse(test_data$y == "yes", 1, 0)
 
-library(gbm)
 set.seed(445)
 
+# Fit boosting model
 boost_model <- gbm(
   y_num ~ . - y,         
   data = train_data,
@@ -591,55 +495,19 @@ boost_model <- gbm(
   bag.fraction = 0.5,
   verbose = FALSE
 )
+
 best_trees <- gbm.perf(boost_model, method = "OOB", plot.it = FALSE)
 
-
+# Predictions
 boost_prob <- predict(boost_model, test_data, n.trees = best_trees, type = "response")
-boost_pred <- factor(ifelse(boost_prob > 0.5, "yes", "no"), levels = c("no","yes"))
+boost_pred <- factor(ifelse(boost_prob > 0.5, "yes", "no"), levels = c("no", "yes"))
 
-cm_boost <- confusionMatrix(boost_pred, test_y, positive = "yes")
-cm_boost
+# Confusion matrix
+cm_boost <- confusionMatrix(boost_pred, test_data$y, positive = "yes")
 
-roc_boost <- roc(test_y, boost_prob)
+# ROC and AUC
+roc_boost <- roc(test_data$y, boost_prob)
 auc_boost <- auc(roc_boost)
-
-## test 
-final_results <- data.frame(
-  Model = c("Logistic", "Ridge", "LASSO", "KNN", "GAM", "Boosting"),
-  Accuracy = c(
-    cm_baseline$overall["Accuracy"],
-    cm_ridge$overall["Accuracy"],
-    cm_lasso$overall["Accuracy"],
-    cm_knn$overall["Accuracy"],
-    cm_gam$overall["Accuracy"],
-    cm_boost$overall["Accuracy"]
-  ),
-  Sensitivity = c(
-    cm_baseline$byClass["Sensitivity"],
-    cm_ridge$byClass["Sensitivity"],
-    cm_lasso$byClass["Sensitivity"],
-    cm_knn$byClass["Sensitivity"],
-    cm_gam$byClass["Sensitivity"],
-    cm_boost$byClass["Sensitivity"]
-  ),
-  AUC = c(
-    auc(roc_baseline),
-    auc(roc_ridge),
-    auc(roc_lasso),
-    auc_knn,
-    auc_gam,
-    auc_boost
-  )
-)
-# combined ROC 
-roc_all <- rbind(
-  data.frame(fpr = 1 - roc_baseline$specificities, tpr = roc_baseline$sensitivities, Model = "Logistic"),
-  data.frame(fpr = 1 - roc_ridge$specificities,    tpr = roc_ridge$sensitivities,    Model = "Ridge"),
-  data.frame(fpr = 1 - roc_lasso$specificities,    tpr = roc_lasso$sensitivities,    Model = "LASSO"),
-  data.frame(fpr = 1 - roc_knn$specificities,      tpr = roc_knn$sensitivities,      Model = "KNN"),
-  data.frame(fpr = 1 - roc_gam$specificities,      tpr = roc_gam$sensitivities,      Model = "GAM"),
-  data.frame(fpr = 1 - roc_boost$specificities,    tpr = roc_boost$sensitivities,    Model = "Boosting")
-)
 ```
 
 ## Boosting 1/3: Model Formulation
@@ -647,89 +515,25 @@ roc_all <- rbind(
 - Boosting builds many small trees sequentially, each fixing errors from the previous one.
 - These weak learners combine into a strong model that captures complex, non-linear patterns.
 - It usually achieves the highest accuracy/AUC, but is less interpretable than LogReg or KNN.
-- A diagram of small trees merging into one strong model illustrates this process.
-
----
-
-```{r, echo=FALSE}
-library(pROC)
-library(caret)
-
-set.seed(123)
-
-knn_final <- knn(
-  train = train_x_scaled,
-  test  = test_x_scaled,
-  cl    = train_y,
-  k     = best_k,
-  prob  = TRUE
+```{r boosting-viz, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=6}
+plot(
+  boost_model$train.error,
+  type = "l",
+  xlab = "Number of Trees (Iterations)",
+  ylab = "Training Loss",
+  main = "Boosting: Sequential Error Reduction",
+  col = "steelblue",
+  lwd = 2
 )
-
-knn_prob_attr <- attr(knn_final, "prob")
-knn_prob_yes <- ifelse(knn_final == "yes", knn_prob_attr, 1 - knn_prob_attr)
-
-test_y_fac <- factor(test_y, levels = c("no", "yes"))
-
-knn_roc  <- roc(response = test_y_fac, predictor = knn_prob_yes, levels = c("no", "yes"))
-knn_auc  <- as.numeric(auc(knn_roc))
-
-knn_cm      <- confusionMatrix(knn_final, test_y_fac, positive = "yes")
-knn_recall  <- knn_cm$byClass["Recall"]
-
-
-
-logit_model <- glm(y ~ ., data = bank_train, family = binomial)
-
-logit_prob <- predict(logit_model, newdata = bank_test, type = "response")
-logit_pred <- ifelse(logit_prob >= 0.5, "yes", "no")
-logit_pred <- factor(logit_pred, levels = c("no", "yes"))
-
-logit_roc <- roc(response = test_y_fac, predictor = logit_prob, levels = c("no", "yes"))
-logit_auc <- as.numeric(auc(logit_roc))
-
-logit_cm     <- confusionMatrix(logit_pred, test_y_fac, positive = "yes")
-logit_recall <- logit_cm$byClass["Recall"]
-
-
-
-results <- data.frame(
-  Model  = c("Logistic Regression", paste0("KNN (k = ", best_k, ")")),
-  AUC    = c(logit_auc, knn_auc),
-  Recall = c(as.numeric(logit_recall), as.numeric(knn_recall))
-)
-
-results$AUC    <- round(results$AUC, 3)
-results$Recall <- round(results$Recall, 3)
-
-results
-
 ```
 
-
-
-
 ## Boosting 2/3: Hyperparameter Tuning 
-- We tuned the number of trees using test-error curves to prevent overfitting.
-- Test error decreased steadily and leveled off around M = 1500 trees, which we selected as the optimal value.
-- This choice balances model complexity and generalization, giving strong predictive performance without excessive tree growth.
-
----
-
-```{r, echo=FALSE}
-bank_train$y_num <- ifelse(bank_train$y == "yes", 1, 0)
-bank_test$y_num  <- ifelse(bank_test$y == "yes", 1, 0)
-boost_model <- gbm(
-  formula = y_num ~ . - y,
-  data = bank_train,
-  distribution = "bernoulli",
-  n.trees = 1000,
-  interaction.depth = 3,
-  shrinkage = 0.01,
-  n.minobsinnode = 10,
-  verbose = FALSE
-)
-
-M_values <- seq(50, 1000, by = 50)
+- We tuned the number of trees using OOB error estimation to prevent overfitting.
+- The OOB method selected **`r best_trees`** trees as optimal.
+- This choice balances model complexity and generalization.
+```{r boosting-tuning, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+# Test different numbers of trees
+M_values <- seq(50, 1500, by = 50)
 test_error <- numeric(length(M_values))
 
 for (i in seq_along(M_values)) {
@@ -737,65 +541,40 @@ for (i in seq_along(M_values)) {
   
   prob_M <- predict(
     boost_model,
-    newdata = bank_test,
+    newdata = test_data,
     n.trees = M,
     type = "response"
   )
   
   pred_M <- ifelse(prob_M > 0.5, "yes", "no")
-  test_error[i] <- mean(pred_M != bank_test$y)
+  test_error[i] <- mean(pred_M != test_data$y)
 }
 
 best_idx <- which.min(test_error)
 best_M   <- M_values[best_idx]
-
-cat("Best number of trees based on Test Error:", best_M, "\n")
 
 plot(
   M_values, test_error,
   type = "b",
   xlab = "Number of Trees (M)",
   ylab = "Test Error",
-  main = "Boosting: Test Error vs Number of Trees"
+  main = "Boosting: Test Error vs Number of Trees",
+  col = "steelblue",
+  lwd = 2
 )
-
-abline(v = best_M, lty = 2) 
-
+abline(v = best_M, lty = 2, col = "red", lwd = 2)
+text(best_M, max(test_error), paste("Best M =", best_M), pos = 4, col = "red")
 ```
+
+**Optimal number of trees (via test error):** `r best_M`
+
 ## Boosting 3/3: Evaluation & Importance 
-- The final Boosting model achieved the highest AUC, making it the strongest predictive model among those tested.
-- Because Boosting lacks interpretable coefficients, we rely on a Variable Importance Plot to understand which features influence predictions most.
-- The importance rankings generally align with the key predictors identified by Logistic Regression, offering a post-hoc view into the model’s behavior.
-
----
-
-
-```{r, echo=FALSE}
-library(pROC)
-
-boost_prob <- predict(
-  boost_model,
-  newdata = bank_test,
-  n.trees = 1000,       
-  type = "response"
-)
-
-test_y_fac <- factor(bank_test$y, levels = c("no", "yes"))
-
-
-boost_roc <- roc(
-  response  = test_y_fac,
-  predictor = boost_prob,
-  levels    = c("no", "yes")
-)
-
-boost_auc <- as.numeric(auc(boost_roc))
-cat("Boosting Test AUC:", round(boost_auc, 3), "\n")
-
-
-vi <- summary(boost_model, plotit = FALSE)  
-
-
+- The final Boosting model achieved the highest AUC and sensitivity among all models tested.
+- Variable Importance Plot shows which features influence predictions most.
+- The importance rankings align with key predictors identified by Logistic Regression.
+```{r boosting-results, echo=FALSE, message=FALSE, warning=FALSE}
+# Variable importance
+vi <- summary(boost_model, plotit = FALSE)
 top_n <- min(10, nrow(vi))
 vi_top <- vi[1:top_n, ]
 
@@ -804,12 +583,82 @@ barplot(
   names.arg = vi_top$var,
   las = 2,
   ylab = "Relative Influence",
-  main = "Boosting: Variable Importance (Top Features)"
+  main = "Boosting: Variable Importance (Top 10 Features)",
+  col = "steelblue"
 )
-
 ```
 
+**Boosting Test AUC:** `r round(auc_boost, 3)`  
+**Boosting Sensitivity:** `r round(cm_boost$byClass["Sensitivity"], 3)`  
+**Boosting Accuracy:** `r round(cm_boost$overall["Accuracy"], 3)`
 
+
+
+## Results: Comparative Evaluation
+- We evaluated five models using Accuracy, Sensitivity (Recall), and AUC on the Test Set.
+- **Boosting** achieved the highest overall accuracy and the highest sensitivity, meaning it identified the most true positives.
+- Logistic, Ridge, and LASSO models performed very similarly in accuracy and AUC, but with lower sensitivity.
+- KNN performed the worst, with the lowest AUC, indicating weak separation between classes.
+
+---
+
+## Model Performance Comparison
+```{r final-table, echo=FALSE, message=FALSE, warning=FALSE}
+# Create aliases for consistency
+cm_knn <- knn_cm
+roc_knn <- knn_roc
+
+final_results <- data.frame(
+  Model = c("Logistic", "Ridge", "LASSO", "KNN", "Boosting"),
+  Accuracy = c(
+    cm_baseline$overall["Accuracy"],
+    cm_ridge$overall["Accuracy"],
+    cm_lasso$overall["Accuracy"],
+    cm_knn$overall["Accuracy"],
+    cm_boost$overall["Accuracy"]
+  ),
+  Sensitivity = c(
+    cm_baseline$byClass["Sensitivity"],
+    cm_ridge$byClass["Sensitivity"],
+    cm_lasso$byClass["Sensitivity"],
+    cm_knn$byClass["Sensitivity"],
+    cm_boost$byClass["Sensitivity"]
+  ),
+  AUC = c(
+    auc(roc_baseline),
+    auc(roc_ridge),
+    auc(roc_lasso),
+    auc_knn,
+    auc_boost
+  )
+)
+
+knitr::kable(final_results, digits = 3)
+```
+
+---
+
+## ROC Curve Comparison
+```{r final-roc, echo=FALSE, message=FALSE, warning=FALSE}
+roc_all <- rbind(
+  data.frame(fpr = 1 - roc_baseline$specificities, tpr = roc_baseline$sensitivities, Model = "Logistic"),
+  data.frame(fpr = 1 - roc_ridge$specificities,    tpr = roc_ridge$sensitivities,    Model = "Ridge"),
+  data.frame(fpr = 1 - roc_lasso$specificities,    tpr = roc_lasso$sensitivities,    Model = "LASSO"),
+  data.frame(fpr = 1 - roc_knn$specificities,      tpr = roc_knn$sensitivities,      Model = "KNN"),
+  data.frame(fpr = 1 - roc_boost$specificities,    tpr = roc_boost$sensitivities,    Model = "Boosting")
+)
+
+ggplot(roc_all, aes(x = fpr, y = tpr, color = Model)) +
+  geom_line(linewidth = 1) +
+  geom_abline(linetype = "dashed", color = "grey") +
+  labs(
+    title = "ROC Curve Comparison for All Models",
+    x = "False Positive Rate",
+    y = "True Positive Rate"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "right")
+```
 
 ## Business Impact
 * The central trade-off: Boosting is the best predictor, but the **Regularized Logistic Regression** offers the most *interpretable* and *actionable* insights for the bank.
