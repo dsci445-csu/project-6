@@ -284,16 +284,10 @@ All three models yield a very similar AUC of approximately $0.90$. The ROC curve
 
 ---
 
-- Standardize numeric predictors.
-- Perform CV to tune **k** .
-- Report best k and corresponding CV error.
-- Discuss bias-variance behavior.
-
-
 ## 3.4 K-Nearest Neighbors (KNN)
 KNN is a nonparametric method that relies on feature scaling and distance-based classification.
 
-Prepare scaled numeric predictors
+## Prepare scaled numeric predictors
 ```{r}
 library(class)
 
@@ -315,7 +309,7 @@ test_y  <- test_data$y
 
 ```
 
-Cross-validation to choose the best k
+## Cross-validation to choose the best k
 
 ```{r}
 k_values <- seq(1, 25, 2)
@@ -346,7 +340,9 @@ best_k
 
 ```
 
-Final KNN prediction and metrics
+Using 5-fold cross-validation across odd values of kk from 1 to 25, the model achieved its highest average classification accuracy at k=23. This indicates that a relatively large number of neighbors provides the best bias–variance trade-off for this dataset. Because the Bank Marketing data is high-dimensional and noisy, smaller values of kk likely overfit the training data, while larger k values smooth out noise and generalize better. The fact that k=23 performs best suggests the underlying decision boundary is fairly smooth, and KNN benefits from stronger averaging across many neighbors.
+
+## Final KNN prediction and metrics
 
 ```{r}
 knn_pred <- knn(
@@ -365,6 +361,8 @@ auc_knn <- auc(roc_knn)
 auc_knn
 
 ```
+
+The KNN model with k=23 achieved an accuracy of 0.8911, which is comparable to the logistic regression models. However, due to the class imbalance, accuracy alone is misleading. The model’s sensitivity is very low (0.26), meaning it correctly identifies only about 26% of clients who actually subscribed. In contrast, the specificity is very high (0.97), showing the model is much better at identifying non-subscribers. The AUC of 0.617 confirms that KNN provides only limited discriminatory power for this dataset, performing slightly above random chance but worse than logistic regression and boosting models.
 
 
 ## 3.5 Generalized Additive Models (GAM)
@@ -394,6 +392,9 @@ auc_gam
 
 ```
 
+The GAM model allows nonlinear relationships through smoothing splines and the ANOVA results show that all five smoothed predictors—age, balance, duration, campaign, and previous—have statistically significant nonlinear effects on subscription probability (all p < 0.001). The model maintains an accuracy of 0.8888, similar to previous models, but like the other approaches, it struggles with the minority “yes” class. The sensitivity is 0.216, meaning the GAM correctly identifies only about 21% of subscribers, while specificity is very high at 0.978, reflecting accurate detection of non-subscribers. Despite the low sensitivity, the model achieves an AUC of 0.854, indicating strong overall discriminatory power. This suggests the GAM captures meaningful nonlinear patterns, but still struggles to translate these patterns into correct classifications for the rare positive cases.
+
+
 
 ## 3.6 Boosting (Most Flexible Model)
 
@@ -415,7 +416,7 @@ boost_model <- gbm(
   y_num ~ . - y,         
   data = train_data,
   distribution = "bernoulli",
-  n.trees = 400,       
+  n.trees = 1500,       
   shrinkage = 0.01,
   interaction.depth = 3,
   bag.fraction = 0.5,
@@ -426,6 +427,8 @@ best_trees <- gbm.perf(boost_model, method = "OOB", plot.it = FALSE)
 best_trees
 
 ```
+
+The boosting model was trained using 1500 trees, and the out-of-bag (OOB) performance evaluation selected all 1500 trees as optimal. This indicates that the model continued to improve throughout the entire boosting sequence, with no evidence of overfitting detected by the OOB error. The small residual standard error from the LOESS smoother (2.7 × 10⁻⁵) shows that the OOB improvement curve is smooth, stable, and consistently positive, suggesting reliable incremental improvement. The model's behavior reflects the strengths of boosting: its ability to gradually reduce bias and capture complex nonlinear and interaction effects in the data. The fact that performance continues to improve up to 1500 trees suggests that boosting may be the most flexible and predictive model among those considered.
 
 Prediction + Metrics
 ```{r}
@@ -440,19 +443,13 @@ auc_boost <- auc(roc_boost)
 auc_boost
 
 ```
-
+The boosting model achieved the strongest performance among all models evaluated. Its overall accuracy on the test set was 0.9047, exceeding both the baseline logistic regression and other flexible models such as KNN and GAM. Most importantly, boosting substantially improved sensitivity, correctly identifying 41.15% of actual subscribers (“yes”), compared to roughly 21–26% for the other models. This improvement indicates that boosting is better able to capture the complex, nonlinear structure of the minority class, which is critical in this imbalanced classification problem. Specificity remained high (96.99%), showing that the model continued to classify non-subscribers accurately.
+Boosting also demonstrated stronger balance across classes, with a Balanced Accuracy of 0.6907, the highest among all models tested. Additionally, the model’s AUC value (insert your computed AUC here once available) reflects its enhanced ability to rank subscribers above non-subscribers. Together, these results reinforce that boosting provides the best predictive performance in terms of both overall classification and minority-class detection, aligning with expectations for a highly flexible, low-bias model.
 
 
 # 4. Results — Model Assessment & Comparison  
 
-
 ## 4.1 Test Set Performance
-For each model:
-- Confusion matrix  
-  - Accuracy and misclassification rate  
-  - Sensitivity / specificity (important for minority class)  
-- ROC curves and AUC  
-
 
 ```{r}
 final_results <- data.frame(
@@ -486,7 +483,13 @@ final_results <- data.frame(
 final_results
 
 ```
+The overall model comparison confirms that Boosting is the strongest predictive model in this project. It achieved the highest accuracy (0.9047), the highest sensitivity (0.4115), and the highest AUC (0.9266). These metrics show that boosting not only performs well overall but is also the most effective at identifying the minority “yes” class—an essential goal in the bank marketing problem.
 
+The family of logistic models (Logistic, Ridge, and LASSO) all attained similar accuracy levels (≈0.898–0.900) and high AUC values (≈0.907), indicating solid discrimination ability. However, their sensitivity values (0.28–0.33) remain relatively low, meaning they miss many potential subscribers compared with boosting.
+
+KNN performed worse overall, with lower accuracy (0.8911) and the lowest AUC (0.617), showing that it struggled with this high-dimensional, imbalanced dataset. GAM demonstrated moderate AUC (0.854), but its low sensitivity (0.2157) suggests it was unable to flexibly model the decision boundary needed to capture the minority class.
+
+Overall, boosting delivered the most balanced and effective performance across all key metrics, supporting the conclusion that flexible ensemble methods are better suited for the nonlinear patterns present in the bank marketing data.
 
 ## 4.2 Comparative Evaluation
 - Table summarizing all test-set performance metrics.
