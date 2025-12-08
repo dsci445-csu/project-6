@@ -187,7 +187,7 @@ theme_minimal(base_size = 14)
 * **Most clients say NO; only ≈11% say YES**
 
 ```{r slide2-plot, echo=FALSE, fig.align="center", out.width="90%"}
-knitr::include_graphics("imbalance_plot.png")
+knitr::include_graphics("EDA/imbalance_plot.png")
 ```
 
 ## EDA Finding 1: Contact Method Matters
@@ -195,7 +195,7 @@ knitr::include_graphics("imbalance_plot.png")
 * Cell phone calls perform best
 
 ```{r eda1-plot, echo=FALSE, fig.align="center", out.width="90%"}
-knitr::include_graphics("contact_plot.png")
+knitr::include_graphics("EDA/contact_plot.png")
 
 ```
 
@@ -204,7 +204,7 @@ knitr::include_graphics("contact_plot.png")
 * Past success predicts new success
 
 ```{r eda2-plot, echo=FALSE, fig.align="center", out.width="90%"}
-knitr::include_graphics("poutcome_plot.png")
+knitr::include_graphics("EDA/poutcome_plot.png")
 ```
 
 ## EDA Finding 3: Too Many Calls Hurts Results
@@ -212,7 +212,7 @@ knitr::include_graphics("poutcome_plot.png")
 * More calls = worse results
 
 ```{r eda3-plot, echo=FALSE, fig.align="center", out.width="90%"}
-knitr::include_graphics("campaign_plot.png")
+knitr::include_graphics("EDA/campaign_plot.png")
 ```
 
 
