@@ -1,0 +1,96 @@
+---
+title: "plots"
+author: "Group 6"
+date: "2025-12-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+
+# EDA plots as images
+
+# 1. Class imbalance plot (from page 3 of your PDF)
+png("imbalance_plot.png", width = 800, height = 500)
+ggplot(bank_full, aes(x = y, fill = y)) +
+  geom_bar() +
+  labs(title = "Distribution of Term Deposit Subscription",
+       x = "Subscribed to Term Deposit?",
+       y = "Count") +
+  theme_minimal(base_size = 14)
+dev.off()
+
+# 2. Contact method plot (from your contact type analysis)
+png("contact_plot.png", width = 800, height = 500)
+ggplot(bank_full, aes(x = contact, fill = y)) +
+  geom_bar(position = "fill") +
+  labs(title = "Subscription Rate by Contact Type",
+       x = "Contact Method",
+       y = "Proportion") +
+  theme_minimal(base_size = 14)
+dev.off()
+
+# 3. Job type plot
+png("job_plot.png", width = 800, height = 500)
+ggplot(bank_full, aes(x = job, fill = y)) +
+  geom_bar(position = "fill") +
+  coord_flip() +
+  labs(title = "Subscription Rate by Job",
+       y = "Proportion") +
+  theme_minimal(base_size = 12)
+dev.off()
+
+# 4. Education plot
+png("education_plot.png", width = 800, height = 500)
+ggplot(bank_full, aes(x = education, fill = y)) +
+  geom_bar(position = "fill") +
+  coord_flip() +
+  labs(title = "Subscription Rate by Education Level",
+       y = "Proportion") +
+  theme_minimal(base_size = 14)
+dev.off()
+
+# 5. Previous outcome plot
+png("poutcome_plot.png", width = 800, height = 500)
+ggplot(bank_full, aes(x = poutcome, fill = y)) +
+  geom_bar(position = "fill") +
+  labs(title = "Subscription Rate by Previous Campaign Outcome",
+       y = "Proportion") +
+  theme_minimal(base_size = 14)
+dev.off()
+
+# 6. Campaign contacts plot
+png("campaign_plot.png", width = 800, height = 500)
+bank_full %>%
+  group_by(campaign) %>%
+  summarise(success_rate = mean(y == "yes")) %>%
+  ggplot(aes(x = campaign, y = success_rate)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Subscription Success Rate vs. Number of Campaign Contacts",
+       x = "Number of Contacts During This Campaign",
+       y = "Success Rate") +
+  theme_minimal(base_size = 14)
+dev.off()
+
+cat("EDA plots saved as PNG files in your current directory!\n")
+cat("Files created:\n")
+cat("- imbalance_plot.png\n")
+cat("- contact_plot.png\n")
+cat("- job_plot.png\n")
+cat("- education_plot.png\n")
+cat("- poutcome_plot.png\n")
+cat("- campaign_plot.png\n")
+
+```
+
+
+
+
+
+

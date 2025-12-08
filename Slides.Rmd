@@ -162,21 +162,50 @@ auc_values <- data.frame(
 [Image of a marketing funnel illustrating customer conversion]
 
 
-## The Bank Marketing Dataset (Slide 2)
-* **Discuss:** The dataset structure: $\approx 45,000$ client observations from a Portuguese banking institution's telemarketing campaigns.
-* **Discuss:** Brief overview of the four main predictor categories: Client Demographics, Financial Indicators, Campaign Features, and Past Outcomes. Mention the paper had more features, fro privacy reasons the public data set has less
-* **Discuss:** The Target Variable ($y$) is binary: Did the client subscribe to a term deposit (Yes/No)?
-* **Discuss:** Emphasize the severity of the class imbalance (e.g., typically $\approx 11\%$ 'Yes' subscriptions). This may yield higher false negatives.
-* **Image/Plot Idea:** A small table summarizing the list of the 4 key variable groups (e.g., Demographics, Financial, Campaign, Past). 
-* **Image/Plot Idea:** A **Bar Plot** showing the distribution of the target variable ($y$), visually highlighting the imbalance. 
+## The Bank Marketing Dataset
+
+* **45,000 client observations** from Portuguese bank telemarketing  
+* **Target variable ($y$):** Did client subscribe to term deposit? (Yes/No)  
+* **Class imbalance:** Only ≈11% "Yes" subscriptions  
+* **Four main predictor groups:** demographics, financial indicators, campaign features, past outcomes  
+
+## Term Deposit Class Imbalance
+
+* **Most clients say NO; only ≈11% say YES**
+
+```{r slide2-plot, echo=FALSE, fig.align="center", out.width="90%"}
+knitr::include_graphics("imbalance_plot.png")
+```
+
+## EDA Finding 1: Contact Method Matters
+
+```{r eda1-plot, echo=FALSE, fig.align="center", out.width="90%"}
+knitr::include_graphics("contact_plot.png")
+
+```
+
+## EDA Finding 2: Previous Success Predicts Future Success
+
+```{r eda2-plot, echo=FALSE, fig.align="center", out.width="90%"}
+knitr::include_graphics("poutcome_plot.png")
+```
+
+## EDA Finding 3: Too Many Calls Hurts Results
+
+```{r eda3-plot, echo=FALSE, fig.align="center", out.width="90%"}
+knitr::include_graphics("campaign_plot.png")
+```
 
 
+## Problem Statement & Methodology Overview
 
-## Problem Statement & Methodology Overview (Slide 3)
-* **Discuss:** The project aims for a **Comparative Study**—comparing models based on two criteria: **Predictive Power** and **Interpretability**.
-* **Discuss:** The project goal is **Binary Classification**: Building statistical models that are both **predictive** and **interpretable** for management.
-* **Discuss:** Established an **80/20 Train/Test Split** and used **5-Fold Cross-Validation (CV)** on the training set for tuning and estimating out-of-sample error.
-* **Image/Plot Idea:** An icon representing **Predictive Power** next to an icon representing **Interpretability** (The two core goals).
+* **Goal:** Compare models on two criteria:  
+  * **Predictive Power** – ability to correctly find YES cases  
+  * **Interpretability** – model is easy to understand  
+
+* **Model evaluation:**  
+  * **80/20 Train/Test Split**  
+  * **5-Fold Cross-Validation**  	
 
 
 ## Methodology: Data Preparation (Slide 5)
