@@ -4,9 +4,8 @@ author: "Sandra, Tigist, Mussa Hassen, Waddah"
 subtitle: 'Colorado State University, DSCI 445: Statistical Machine Learning, Dr.Andee
   Kaplan'
 output:
-  ioslides_presentation: 
+  ioslides_presentation:
     css: styles.css
-  
 ---
 
 ```{r appendix, include=FALSE}
@@ -151,42 +150,190 @@ auc_values <- data.frame(
   AUC = c(auc(roc_baseline), auc(roc_ridge), auc(roc_lasso))
 )
 
+
+## boosting 
+
+if ("residuals" %in% colnames(train_data)) {
+  train_data$residuals <- NULL
+}
+
+train_data$y_num <- ifelse(train_data$y == "yes", 1, 0)
+test_data$y_num  <- ifelse(test_data$y == "yes", 1, 0)
+
+library(gbm)
+set.seed(445)
+
+boost_model <- gbm(
+  y_num ~ . - y,         
+  data = train_data,
+  distribution = "bernoulli",
+  n.trees = 1500,       
+  shrinkage = 0.01,
+  interaction.depth = 3,
+  bag.fraction = 0.5,
+  verbose = FALSE
+)
+best_trees <- gbm.perf(boost_model, method = "OOB", plot.it = FALSE)
+
+
+boost_prob <- predict(boost_model, test_data, n.trees = best_trees, type = "response")
+boost_pred <- factor(ifelse(boost_prob > 0.5, "yes", "no"), levels = c("no","yes"))
+
+cm_boost <- confusionMatrix(boost_pred, test_y, positive = "yes")
+cm_boost
+
+roc_boost <- roc(test_y, boost_prob)
+auc_boost <- auc(roc_boost)
+
+## test 
+final_results <- data.frame(
+  Model = c("Logistic", "Ridge", "LASSO", "KNN", "GAM", "Boosting"),
+  Accuracy = c(
+    cm_baseline$overall["Accuracy"],
+    cm_ridge$overall["Accuracy"],
+    cm_lasso$overall["Accuracy"],
+    cm_knn$overall["Accuracy"],
+    cm_gam$overall["Accuracy"],
+    cm_boost$overall["Accuracy"]
+  ),
+  Sensitivity = c(
+    cm_baseline$byClass["Sensitivity"],
+    cm_ridge$byClass["Sensitivity"],
+    cm_lasso$byClass["Sensitivity"],
+    cm_knn$byClass["Sensitivity"],
+    cm_gam$byClass["Sensitivity"],
+    cm_boost$byClass["Sensitivity"]
+  ),
+  AUC = c(
+    auc(roc_baseline),
+    auc(roc_ridge),
+    auc(roc_lasso),
+    auc_knn,
+    auc_gam,
+    auc_boost
+  )
+)
+# combined ROC 
+roc_all <- rbind(
+  data.frame(fpr = 1 - roc_baseline$specificities, tpr = roc_baseline$sensitivities, Model = "Logistic"),
+  data.frame(fpr = 1 - roc_ridge$specificities,    tpr = roc_ridge$sensitivities,    Model = "Ridge"),
+  data.frame(fpr = 1 - roc_lasso$specificities,    tpr = roc_lasso$sensitivities,    Model = "LASSO"),
+  data.frame(fpr = 1 - roc_knn$specificities,      tpr = roc_knn$sensitivities,      Model = "KNN"),
+  data.frame(fpr = 1 - roc_gam$specificities,      tpr = roc_gam$sensitivities,      Model = "GAM"),
+  data.frame(fpr = 1 - roc_boost$specificities,    tpr = roc_boost$sensitivities,    Model = "Boosting")
+)
+
 ```
 
 
-## Project Motivation & Business Problem
+<<<<<<< HEAD
+## Project Motivation & Business Problem (S)
+- Telemarketing campaigns are expensive, time-consuming, and have very low success rates. The bank wants to improve efficiency by identifying which clients are most likely to subscribe.
+- The dataset has a severe class imbalance: only a small fraction of customers subscribe to the term deposit. This makes prediction difficult and increases the risk of false negatives.
+- Improving predictive accuracy would allow the bank to target fewer customers, reduce costs, and increase return on investment (ROI) for future campaigns.
+=======
+## Project Motivation & Business Problem 
 * **Discuss:** The bank's need for efficient marketing and the high cost of telemarketing campaigns. The goal is to maximize the success rate by predicting customer subscription.
 * **Discuss:** The challenge of less positive class (imbalanced data) and why prediction accuracy is crucial.
 * **Image/Plot Idea:** A simple, high-level info graphic of a marketing campaign funnel, highlighting the bottleneck/drop-off point. 
-
-[Image of a marketing funnel illustrating customer conversion]
-
-
-## The Bank Marketing Dataset (Slide 2)
-* **Discuss:** The dataset structure: $\approx 45,000$ client observations from a Portuguese banking institution's telemarketing campaigns.
-* **Discuss:** Brief overview of the four main predictor categories: Client Demographics, Financial Indicators, Campaign Features, and Past Outcomes. Mention the paper had more features, fro privacy reasons the public data set has less
-* **Discuss:** The Target Variable ($y$) is binary: Did the client subscribe to a term deposit (Yes/No)?
-* **Discuss:** Emphasize the severity of the class imbalance (e.g., typically $\approx 11\%$ 'Yes' subscriptions). This may yield higher false negatives.
-* **Image/Plot Idea:** A small table summarizing the list of the 4 key variable groups (e.g., Demographics, Financial, Campaign, Past). 
-* **Image/Plot Idea:** A **Bar Plot** showing the distribution of the target variable ($y$), visually highlighting the imbalance. 
+>>>>>>> 1e461e928605f45b12df81c81104c34ebf17c3d4
 
 
+---
 
-## Problem Statement & Methodology Overview (Slide 3)
-* **Discuss:** The project aims for a **Comparative Study**—comparing models based on two criteria: **Predictive Power** and **Interpretability**.
-* **Discuss:** The project goal is **Binary Classification**: Building statistical models that are both **predictive** and **interpretable** for management.
-* **Discuss:** Established an **80/20 Train/Test Split** and used **5-Fold Cross-Validation (CV)** on the training set for tuning and estimating out-of-sample error.
-* **Image/Plot Idea:** An icon representing **Predictive Power** next to an icon representing **Interpretability** (The two core goals).
+```{r, echo=FALSE}
+library(ggplot2)
+
+ggplot(bank_full, aes(x = y, fill = y)) +
+geom_bar() +
+scale_fill_manual(values = c("#2E86C1", "#F39C12")) +
+labs(
+title = "Term Deposit Subscription (Severe Class Imbalance)",
+x = "Subscribed?",
+y = "Count"
+) +
+theme_minimal(base_size = 14)
+
+```
 
 
-## Methodology: Data Preparation (Slide 5)
-* **Discuss:** **Data Wrangling** involved converting categorical variables to factors and strategies for handling 'unknown' levels (treating them as a separate category vs. missing).
-* **Image/Plot Idea:** A simple flow chart showing: Raw Data $\rightarrow$ Wrangling/Cleaning $\rightarrow$ Train/Test Split. 
-* **Image/Plot Idea:** Summary stats or informational plots
+## The Bank Marketing Dataset
 
-[Image of a data science workflow diagram]
+* **45,000 client observations** from Portuguese bank telemarketing  
+* **Target variable ($y$):** Did client subscribe to term deposit? (Yes/No)  
+* **Class imbalance:** Only ≈11% "Yes" subscriptions  
+* **Four main predictor groups:** demographics, financial indicators, campaign features, past outcomes  
+
+## Term Deposit Class Imbalance
+
+* **Most clients say NO; only ≈11% say YES**
+
+```{r slide2-plot, echo=FALSE, fig.align="center", out.width="90%"}
+knitr::include_graphics("imbalance_plot.png")
+```
+
+## EDA Finding 1: Contact Method Matters
+
+* Cell phone calls perform best
+
+```{r eda1-plot, echo=FALSE, fig.align="center", out.width="90%"}
+knitr::include_graphics("contact_plot.png")
+
+```
+
+## EDA Finding 2: Previous Success Predicts Future Success
+
+* Past success predicts new success
+
+```{r eda2-plot, echo=FALSE, fig.align="center", out.width="90%"}
+knitr::include_graphics("poutcome_plot.png")
+```
+
+## EDA Finding 3: Too Many Calls Hurts Results
+
+* More calls = worse results
+
+```{r eda3-plot, echo=FALSE, fig.align="center", out.width="90%"}
+knitr::include_graphics("campaign_plot.png")
+```
 
 
+## Problem Statement & Methodology Overview
+
+* **Goal:** Compare models on two criteria:  
+  * **Predictive Power** – ability to correctly find YES cases  
+  * **Interpretability** – model is easy to understand  
+
+* **Model evaluation:**  
+  * **80/20 Train/Test Split**  
+  * **5-Fold Cross-Validation**  	
+
+
+## Methodology: Data Preparation (Slide 5) (s)
+
+- Converted all categorical variables into factors so models interpret them correctly.
+- Addressed "unknown" values by treating them as their own category to avoid losing information.
+- Created a new feature previously_contacted to properly encode pdays.
+- Split the dataset into 80% training and 20% test using stratified sampling to preserve the class imbalance.
+- Ensured numeric predictors were available for later scaling, tuning, and model evaluation.
+
+--- 
+
+## Breakdown of Categorical Variable
+```{r, echo=FALSE}
+library(ggplot2)
+
+ggplot(bank_full, aes(x = job)) +
+geom_bar(fill = "steelblue") +
+coord_flip() +
+labs(
+title = "Distribution of Job Categories",
+x = "Job",
+y = "Count"
+) +
+theme_minimal()
+
+```
 
 ## LogReg: Feature Selection & Linearity  #MUSSA
 * Initial feature selection was performed using **Backward Stepwise Elimination** on the full model to find the most useful set of main effects.
@@ -495,6 +642,7 @@ results
 ---
 
 ## Boosting 1/3: Model Formulation
+<<<<<<< HEAD
 - Boosting builds many small trees sequentially, each fixing errors from the previous one.
 - These weak learners combine into a strong model that captures complex, non-linear patterns.
 - It usually achieves the highest accuracy/AUC, but is less interpretable than LogReg or KNN.
@@ -503,6 +651,19 @@ results
 ---
 
 ```{r, echo=FALSE}
+=======
+<<<<<<< HEAD
+- Gradient Boosting Machines (GBM) build an ensemble of weak learners (typically shallow decision trees).
+- Each tree is fit to the errors (residuals) of the previous tree — allowing the model to improve sequentially.
+- This iterative correction makes boosting highly flexible and able to capture complex, nonlinear patterns in the data.
+- Because the model is effectively a sum of many small trees, it becomes a strong predictor but loses interpretability relative to logistic regression.
+- Boosting is expected to be our highest-performing model, especially on imbalanced datasets like this one.
+=======
+* **Discuss:** **Boosting** (e.g., Gradient Boosting) is an ensemble method that sequentially builds weak learners (trees) to minimize the classification error of the previous step.
+* **Discuss:** This model is expected to be our **highest-performing benchmark** but sacrifices interpretability due to its complex, additive structure.
+* **Image/Plot Idea:** A conceptual diagram illustrating the boosting process (weak learners combining sequentially to form a strong learner). 
+```{r, echo=FALSE, results='asis'}
+>>>>>>> b945ec55a63d35c44a7d86c0c78cdee66b660e36
 library(gbm)
 
 bank_train$y_num <- ifelse(bank_train$y == "yes", 1, 0)
@@ -543,12 +704,13 @@ plot(
   ylab = "Training Loss",
   main = "Boosting: Sequential Error Reduction"
 )
+>>>>>>> 1e461e928605f45b12df81c81104c34ebf17c3d4
 
 
-```
 
 
 ## Boosting 2/3: Hyperparameter Tuning 
+<<<<<<< HEAD
 - Boosting requires tuning several hyperparameters, including the number of trees (M), interaction depth, and learning rate (η).
 - Cross-Validation helps find the right balance so the model is flexible enough to learn patterns but not overfit.
 - A plot of Test Error vs. Number of Trees shows where performance stops improving and begins to overfit.
@@ -556,6 +718,17 @@ plot(
 ---
 
 ```{r, echo=FALSE}
+=======
+<<<<<<< HEAD
+- We tuned the number of trees using test-error curves to prevent overfitting.
+- Test error decreased steadily and leveled off around M = 1500 trees, which we selected as the optimal value.
+- This choice balances model complexity and generalization, giving strong predictive performance without excessive tree growth.
+=======
+* **Discuss:** Multiple hyperparameters were tuned using **Cross-Validation**, including the **number of trees** (M), **interaction depth** (complexity of weak learners), and **learning rate** ($\eta$).
+* **Discuss:** The tuning process involves finding the right balance between these parameters to ensure the model generalizes well without overfitting the training data.
+* **Image/Plot Idea:** A plot showing the **Error Rate vs. Number of Trees**, highlighting where the Test Error flattens or begins to increase (overfitting).
+```{r, echo=FALSE, results='asis'}
+>>>>>>> b945ec55a63d35c44a7d86c0c78cdee66b660e36
 boost_model <- gbm(
   formula = y_num ~ . - y,
   data = bank_train,
@@ -566,42 +739,11 @@ boost_model <- gbm(
   n.minobsinnode = 10,
   verbose = FALSE
 )
+>>>>>>> 1e461e928605f45b12df81c81104c34ebf17c3d4
 
-M_values <- seq(50, 1000, by = 50)
-test_error <- numeric(length(M_values))
-
-for (i in seq_along(M_values)) {
-  M <- M_values[i]
-  
-  prob_M <- predict(
-    boost_model,
-    newdata = bank_test,
-    n.trees = M,
-    type = "response"
-  )
-  
-  pred_M <- ifelse(prob_M > 0.5, "yes", "no")
-  test_error[i] <- mean(pred_M != bank_test$y)
-}
-
-best_idx <- which.min(test_error)
-best_M   <- M_values[best_idx]
-
-cat("Best number of trees based on Test Error:", best_M, "\n")
-
-plot(
-  M_values, test_error,
-  type = "b",
-  xlab = "Number of Trees (M)",
-  ylab = "Test Error",
-  main = "Boosting: Test Error vs Number of Trees"
-)
-
-abline(v = best_M, lty = 2) 
-
-```
 
 ## Boosting 3/3: Evaluation & Importance 
+<<<<<<< HEAD
 - The final Boosting model achieved the highest AUC, making it the strongest predictive model among those tested.
 - Because Boosting lacks interpretable coefficients, we rely on a Variable Importance Plot to understand which features influence predictions most.
 - The importance rankings generally align with the key predictors identified by Logistic Regression, offering a post-hoc view into the model’s behavior.
@@ -610,51 +752,86 @@ abline(v = best_M, lty = 2)
 
 
 ```{r, echo=FALSE}
+=======
+<<<<<<< HEAD
+=======
+* **Discuss:** The final Boosting model was evaluated on the **Test Set**. Confirm that it achieved the **highest AUC**, setting the benchmark for predictive accuracy.
+* **Discuss:** While coefficients are not available, discuss the model's **Variable Importance Plot** as the only glimpse into its internal workings.
+* **Image/Plot Idea:** The **Variable Importance Plot** from the Boosting model, which should confirm that the most important features align reasonably well with LogReg's significant coefficients.
+```{r, echo=FALSE, results='asis'}
+>>>>>>> b945ec55a63d35c44a7d86c0c78cdee66b660e36
 library(pROC)
+>>>>>>> 1e461e928605f45b12df81c81104c34ebf17c3d4
 
-boost_prob <- predict(
-  boost_model,
-  newdata = bank_test,
-  n.trees = 1000,       
-  type = "response"
+--- 
+
+
+
+
+
+## Results: Comparative Evaluation (Slide 13). (S)
+- We evaluated six models using Accuracy, Sensitivity (Recall), and AUC on the Test Set.
+- Boosting achieved the highest overall accuracy (0.905) and the highest sensitivity (0.412), meaning it identified the most true positives.
+- Logistic, Ridge, and LASSO models performed very similarly in accuracy (~0.898–0.900) and AUC (~0.907–0.908), but with lower sensitivity.
+GAM achieved moderate accuracy and AUC but very low sensitivity.
+KNN performed the worst, with the lowest AUC (0.617), indicating weak separation between classes.
+
+--- 
+
+```{r, echo=FALSE}
+final_results <- data.frame(
+  Model = c("Logistic", "Ridge", "LASSO", "KNN", "GAM", "Boosting"),
+  Accuracy = c(
+    cm_baseline$overall["Accuracy"],
+    cm_ridge$overall["Accuracy"],
+    cm_lasso$overall["Accuracy"],
+    cm_knn$overall["Accuracy"],
+    cm_gam$overall["Accuracy"],
+    cm_boost$overall["Accuracy"]
+  ),
+  Sensitivity = c(
+    cm_baseline$byClass["Sensitivity"],
+    cm_ridge$byClass["Sensitivity"],
+    cm_lasso$byClass["Sensitivity"],
+    cm_knn$byClass["Sensitivity"],
+    cm_gam$byClass["Sensitivity"],
+    cm_boost$byClass["Sensitivity"]
+  ),
+  AUC = c(
+    auc(roc_baseline),
+    auc(roc_ridge),
+    auc(roc_lasso),
+    auc_knn,
+    auc_gam,
+    auc_boost
+  )
 )
 
-test_y_fac <- factor(bank_test$y, levels = c("no", "yes"))
-
-
-boost_roc <- roc(
-  response  = test_y_fac,
-  predictor = boost_prob,
-  levels    = c("no", "yes")
-)
-
-boost_auc <- as.numeric(auc(boost_roc))
-cat("Boosting Test AUC:", round(boost_auc, 3), "\n")
-
-
-vi <- summary(boost_model, plotit = FALSE)  
-
-
-top_n <- min(10, nrow(vi))
-vi_top <- vi[1:top_n, ]
-
-barplot(
-  height = vi_top$rel.inf,
-  names.arg = vi_top$var,
-  las = 2,
-  ylab = "Relative Influence",
-  main = "Boosting: Variable Importance (Top Features)"
-)
+knitr::kable(final_results, digits = 3)
 
 ```
+---
 
+```{r, echo=FALSE}
+roc_all <- rbind(
+  data.frame(fpr = 1 - roc_baseline$specificities, tpr = roc_baseline$sensitivities, Model = "Logistic"),
+  data.frame(fpr = 1 - roc_ridge$specificities,    tpr = roc_ridge$sensitivities,    Model = "Ridge"),
+  data.frame(fpr = 1 - roc_lasso$specificities,    tpr = roc_lasso$sensitivities,    Model = "LASSO"),
+  data.frame(fpr = 1 - roc_knn$specificities,      tpr = roc_knn$sensitivities,      Model = "KNN"),
+  data.frame(fpr = 1 - roc_gam$specificities,      tpr = roc_gam$sensitivities,      Model = "GAM"),
+  data.frame(fpr = 1 - roc_boost$specificities,    tpr = roc_boost$sensitivities,    Model = "Boosting")
+)
 
-
-
-## Results: Comparative Evaluation (Slide 13). #MUSSA
-* **Discuss:** Present the **Final Summary Table** comparing the Test Set performance (AUC, Recall, Accuracy) of all models (**Best LogReg**, **KNN**, **Boosting**).
-* **Discuss:** Visually compare the models using the **Combined ROC Curve Plot** and discuss which model dominates the space.
-* **Image/Plot Idea:** The **Combined ROC Curve Plot** comparing all three final models (LogReg, KNN, and Boosting). 
+ggplot(roc_all, aes(x = fpr, y = tpr, color = Model)) +
+  geom_line(size = 1) +
+  geom_abline(linetype = "dashed") +
+  labs(
+    title = "ROC Curve Comparison for All Models",
+    x = "False Positive Rate",
+    y = "True Positive Rate"
+  ) +
+  theme_minimal()
+```
 
 
 
