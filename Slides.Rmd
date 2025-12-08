@@ -650,7 +650,7 @@ results
 
 ---
 
-```{r}
+```{r, echo=FALSE}
 library(pROC)
 library(caret)
 
@@ -714,7 +714,7 @@ results
 
 ---
 
-```{r}
+```{r, echo=FALSE}
 bank_train$y_num <- ifelse(bank_train$y == "yes", 1, 0)
 bank_test$y_num  <- ifelse(bank_test$y == "yes", 1, 0)
 boost_model <- gbm(
@@ -769,7 +769,7 @@ abline(v = best_M, lty = 2)
 ---
 
 
-```{r}
+```{r, echo=FALSE}
 library(pROC)
 
 boost_prob <- predict(
