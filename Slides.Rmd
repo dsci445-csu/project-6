@@ -1,5 +1,5 @@
 ---
-title: "Statistical Machine Learning Models on A Bank Marketing dataset"
+title: "Statistical Machine Learning Models on A Bank Marketing Dataset"
 author: "Sandra, Tigist, Mussa Hassen, Waddah"
 subtitle: 'Colorado State University, DSCI 445: Statistical Machine Learning, Dr.Andee
   Kaplan'
@@ -187,45 +187,36 @@ theme_minimal(base_size = 14)
 
 * **Most clients say NO; only ≈11% say YES**
 
-```{r slide2-plot, echo=FALSE, fig.align="center", out.width="90%"}
+```{r slide2-plot, echo=FALSE, fig.align="center", out.width="75%"}
 knitr::include_graphics("EDA/imbalance_plot.png")
 ```
+
 
 ## EDA Finding 1: Contact Method Matters
 
 * Cell phone calls perform best
 
-```{r eda1-plot, echo=FALSE, fig.align="center", out.width="90%"}
+```{r eda1-plot, echo=FALSE, fig.align="center", out.width="75%"}
 knitr::include_graphics("EDA/contact_plot.png")
-
 ```
+
 
 ## EDA Finding 2: Previous Success Predicts Future Success
 
 * Past success predicts new success
 
-```{r eda2-plot, echo=FALSE, fig.align="center", out.width="90%"}
+```{r eda2-plot, echo=FALSE, fig.align="center", out.width="68%"}
 knitr::include_graphics("EDA/poutcome_plot.png")
 ```
+
 
 ## EDA Finding 3: Too Many Calls Hurts Results
 
 * More calls = worse results
 
-```{r eda3-plot, echo=FALSE, fig.align="center", out.width="90%"}
+```{r eda3-plot, echo=FALSE, fig.align="center", out.width="75%"}
 knitr::include_graphics("EDA/campaign_plot.png")
 ```
-
-
-## Problem Statement & Methodology Overview
-
-* **Goal:** Compare models on two criteria:  
-  * **Predictive Power** – ability to correctly find YES cases  
-  * **Interpretability** – model is easy to understand  
-
-* **Model evaluation:**  
-  * **80/20 Train/Test Split**  
-  * **5-Fold Cross-Validation**  	
 
 
 ## Methodology: Data Preparation (Slide 5) (s)
@@ -296,6 +287,7 @@ ggplot(train_data, aes(x = balance, y = residuals)) +
 plot(cv.ridge) 
 plot(cv.lasso)
 ```
+
 
 ## Evaluation 
 * The final selected LogReg model was evaluated on the 5-fold CV error rate, along with metrics focused on the confusion matrix.
@@ -670,7 +662,6 @@ ggplot(roc_all, aes(x = fpr, y = tpr, color = Model)) +
 * The central trade-off: Boosting is the best predictor, but the **Regularized Logistic Regression** offers the most *interpretable* and *actionable* insights for the bank.
 * Sample coefficients: $\beta_{Balance^2}$ = -23.02, $\beta_{Housing}$ = -0.65, $\beta_{JobStudent}$ = 4.064
 * The chosen model can lead to cost savings and higher ROI for future campaigns.
-* **Image/Plot Idea:** A visual metaphor (e.g., a scale or seesaw) contrasting "High Performance" vs. "High Interpretability."
 
 
 ## Discussion
