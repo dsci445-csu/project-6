@@ -1,11 +1,6 @@
 ---
-<<<<<<< HEAD
-title: "Statistical Machine Learning Models on A Bank Marketing dataset"
-author: "Sandra Afrifa, Tigist Kefelew, Mussa Hassen, Waddah"
-=======
 title: "Statistical Machine Learning Models on A Bank Marketing Dataset"
-author: "Sandra, Tigist, Mussa Hassen, Waddah"
->>>>>>> 3cba5d87ecc4b182df846f623bf65cd0be1c5f63
+author: "Sandra Afrifa, Tigist Kefelew, Mussa Hassen, Waddah"
 subtitle: 'Colorado State University, DSCI 445: Statistical Machine Learning, Dr.Andee
   Kaplan'
 output:
@@ -158,27 +153,10 @@ auc_values <- data.frame(
 ```
 
 
-## Project Motivation & Business Problem (S)
+## Project Motivation & Business Problem
 - Telemarketing campaigns are expensive, time-consuming, and have very low success rates. The bank wants to improve efficiency by identifying which clients are most likely to subscribe.
 - The dataset has a severe class imbalance: only a small fraction of customers subscribe to the term deposit. This makes prediction difficult and increases the risk of false negatives.
 - Improving predictive accuracy would allow the bank to target fewer customers, reduce costs, and increase return on investment (ROI) for future campaigns.
-
---- 
-
-```{r, echo=FALSE}
-library(ggplot2)
-
-ggplot(bank_full, aes(x = y, fill = y)) +
-geom_bar() +
-scale_fill_manual(values = c("#2E86C1", "#F39C12")) +
-labs(
-title = "Term Deposit Subscription (Severe Class Imbalance)",
-x = "Subscribed?",
-y = "Count"
-) +
-theme_minimal(base_size = 14)
-
-```
 
 
 ## The Bank Marketing Dataset
@@ -224,7 +202,7 @@ knitr::include_graphics("EDA/campaign_plot.png")
 ```
 
 
-## Methodology: Data Preparation (Slide 5) (s)
+## Methodology: Data Preparation
 
 - Converted all categorical variables into factors so models interpret them correctly.
 - Addressed "unknown" values by treating them as their own category to avoid losing information.
@@ -527,7 +505,7 @@ plot(
 
 ## Boosting 2/3: Hyperparameter Tuning 
 - We tuned the number of trees using OOB error estimation to prevent overfitting.
-- The OOB method selected **`r best_trees`** trees as optimal.
+- The OOB method selected 1100 trees as optimal.
 - This choice balances model complexity and generalization.
 
 ---
