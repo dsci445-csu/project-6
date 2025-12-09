@@ -1,6 +1,6 @@
 ---
 title: "Statistical Machine Learning Models on A Bank Marketing Dataset"
-author: "Sandra Afrifa, Tigist Kefelew, Mussa Hassen, Waddah"
+author: "Sandra Afrifa, Tigist Kefelew, Mussa Hassen, Waddah Alaahtani"
 subtitle: 'Colorado State University, DSCI 445: Statistical Machine Learning, Dr.Andee
   Kaplan'
 output:
@@ -242,7 +242,7 @@ $day + month + duration + campaign + previous+ poutcome$
 
 ---
 
-```{r residuals_slide, echo=FALSE, results='asis'}
+```{r residuals_slide, echo=FALSE, fig.align="center", results='asis'}
 residuals <- residuals(glm.baseline, type = "deviance")
 train_data$residuals <- residuals
 
@@ -290,7 +290,7 @@ metrics %>% kable()
 
 --- 
 
-```{r knn-prep, echo=FALSE, message=FALSE, warning=FALSE}
+```{r knn-prep, echo=FALSE, message=FALSE, fig.align="center", warning=FALSE}
 library(dplyr)
 library(class)
 library(caret)
@@ -341,7 +341,7 @@ knn_accuracy_demo <- mean(knn_pred_demo == test_y)
 
 ---
 
-```{r knn-tuning, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+```{r knn-tuning, echo=FALSE, message=FALSE, fig.align="center", warning=FALSE, cache=TRUE}
 set.seed(445)
 
 k_values <- seq(1, 25, by = 2)
@@ -394,9 +394,8 @@ text(best_k, max(cv_error), paste("Best k =", best_k), pos = 4, col = "red")
 * The final KNN model (with optimal $k$) was applied to the **Test Set**. We evaluate performance using **AUC** and compare it to the LogReg models.
 * KNN generally provides a good intermediate balance—often capturing non-linearity better than LogReg but being less computationally expensive than boosting.
 
----
 
-```{r knn-results, echo=FALSE, message=FALSE, warning=FALSE}
+```{r knn-results, echo=FALSE, message=FALSE, fig.align="center",  out.width="75%", warning=FALSE}
 library(pROC)
 
 knn_final <- knn(
@@ -439,9 +438,9 @@ results$Sensitivity <- round(results$Sensitivity, 3)
 knitr::kable(results)
 ```
 
-# 3. Boosting Model (High Predictive Benchmark)
+# 3. Boosting Tress Model 
 
-```{r boosting-setup, echo=FALSE, message=FALSE, warning=FALSE}
+```{r boosting-setup, echo=FALSE, fig.align="center", message=FALSE, warning=FALSE}
 library(gbm)
 library(pROC)
 library(caret)
@@ -491,7 +490,7 @@ auc_boost <- auc(roc_boost)
 
 ---
 
-```{r boosting-viz, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=6}
+```{r boosting-viz, echo=FALSE, message=FALSE, warning=FALSE, fig.align="center", out.width="80%"}
 plot(
   boost_model$train.error,
   type = "l",
@@ -510,7 +509,7 @@ plot(
 
 ---
 
-```{r boosting-tuning, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+```{r boosting-tuning, echo=FALSE, message=FALSE, warning=FALSE, fig.align="center", out.width="75%", cache=TRUE}
 # Test different numbers of trees
 M_values <- seq(50, 1500, by = 50)
 test_error <- numeric(length(M_values))
@@ -619,7 +618,7 @@ knitr::kable(final_results, digits = 3)
 
 
 ## ROC Curve Comparison
-```{r final-roc, echo=FALSE, message=FALSE, warning=FALSE}
+```{r final-roc, echo=FALSE, message=FALSE, fig.align="center", warning=FALSE}
 roc_all <- rbind(
   data.frame(fpr = 1 - roc_baseline$specificities, tpr = roc_baseline$sensitivities, Model = "Logistic"),
   data.frame(fpr = 1 - roc_ridge$specificities,    tpr = roc_ridge$sensitivities,    Model = "Ridge"),
