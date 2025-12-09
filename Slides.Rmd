@@ -1,9 +1,10 @@
 ---
 title: "Statistical Machine Learning Models on A Bank Marketing dataset"
 author: "Sandra, Tigist, Mussa Hassen, Waddah"
-subtitle: 'Colorado State University, DSCI 445: Statistical Machine Learning, Dr. Andee Kaplan'
+subtitle: 'Colorado State University, DSCI 445: Statistical Machine Learning, Dr.Andee
+  Kaplan'
 output:
-  ioslides_presentation: 
+  ioslides_presentation:
     widescreen: true
 ---
 
@@ -158,7 +159,6 @@ auc_values <- data.frame(
 - Improving predictive accuracy would allow the bank to target fewer customers, reduce costs, and increase return on investment (ROI) for future campaigns.
 
 --- 
-
 ```{r, echo=FALSE}
 library(ggplot2)
 
@@ -184,7 +184,7 @@ theme_minimal(base_size = 14)
 
 ## Term Deposit Class Imbalance
 
-* **Most clients say NO; only about 11% say YES **
+* **Most clients say NO; only ≈11% say YES**
 
 ```{r slide2-plot, echo=FALSE, fig.align="center", out.width="90%"}
 knitr::include_graphics("EDA/imbalance_plot.png")
@@ -227,7 +227,7 @@ knitr::include_graphics("EDA/campaign_plot.png")
   * **5-Fold Cross-Validation**  	
 
 
-## Methodology: Data Preparation (s)
+## Methodology: Data Preparation (Slide 5) (s)
 
 - Converted all categorical variables into factors so models interpret them correctly.
 - Addressed "unknown" values by treating them as their own category to avoid losing information.
@@ -235,7 +235,6 @@ knitr::include_graphics("EDA/campaign_plot.png")
 - Split the dataset into 80% training and 20% test using stratified sampling to preserve the class imbalance.
 - Ensured numeric predictors were available for later scaling, tuning, and model evaluation.
 
---- 
 
 ## Breakdown of Categorical Variable
 ```{r, echo=FALSE}
@@ -253,14 +252,15 @@ theme_minimal()
 
 ```
 
-## LogReg: Feature Selection & Linearity  
+## LogReg: Feature Selection & Linearity  #MUSSA
 * Initial feature selection was performed using **Backward Stepwise Elimination** on the full model to find the most useful set of main effects.
 * Our selected formula resutled: 
 
-$y \sim job + marital + education + balance + housing + loan +$
+$y \sim job + marital + education + balance + housing + $
 
-$contact + day + month + duration + campaign + previous+ poutcome$
+$loan + contact + day + month + duration + $
 
+$campaign + previous+ poutcome$
 * **Residual Plots** were used to assess the linearity assumption for numeric predictors (`age`, `balance`). This led to testing a model with non-linear terms.
 
 ---
@@ -285,17 +285,17 @@ ggplot(train_data, aes(x = balance, y = residuals)) +
 * Our model had a cross-validated test error rate 0.09846
 
 
-## LogReg: Regularization & Tuning  
+## LogReg: Regularization & Tuning   #MUSSA
 * We explored Ridge and LASSO regularization as an alternative approach for feature selection.
 * **5-Fold Cross-Validation** was used to select the optimal penalty parameter, $\lambda$, which minimized the mean CV error for each regularized model.
 
-```{r, echo=FALSE, results='asis', fig.width=5, fig.height=3.5}
+```{r, echo=FALSE, results='asis', fig.width=4, fig.height=3}
 
 plot(cv.ridge) 
 plot(cv.lasso)
 ```
 
-## LogReg: Evaluation & Coefficients
+## LogReg: Evaluation & Coefficients  #MUSSA
 * The final selected LogReg model was evaluated on the 5-fold CV error rate, along with metrics focused on the confusion matrix.
 * Models performed relatively similar. We would prefer a model with higher **sensitivity** (few false negatives)
 
@@ -304,11 +304,7 @@ metrics$AUC <- auc_values[, ncol(auc_values)]
 metrics %>% kable()
 ```
 
----
-
 # 2. K-Nearest Neighbors (KNN) Model
-
----
 
 ## KNN 1/3: Feature Preparation 
 * **KNN** requires scaling: all numeric predictors were **standardized** (mean=0, SD=1) to prevent features with larger scales from dominating the distance calculation.
@@ -360,8 +356,6 @@ knn_accuracy_demo <- mean(knn_pred_demo == test_y)
 ```
 
 **Test Accuracy (k=5):** `r round(knn_accuracy_demo * 100, 2)`%
-
----
 
 ## KNN 2/3: Hyperparameter Tuning 
 * The sole hyperparameter, **$k$** (the number of neighbors), determines the model's complexity (i.e., the bias-variance trade-off).
@@ -418,8 +412,6 @@ text(best_k, max(cv_error), paste("Best k =", best_k), pos = 4, col = "red")
 
 **Optimal k:** `r best_k`
 
---- 
-
 ## KNN 3/3: Evaluation & Test Performance
 * The final KNN model (with optimal $k$) was applied to the **Test Set**. We evaluate performance using **AUC** and compare it to the LogReg models.
 * KNN generally provides a good intermediate balance—often capturing non-linearity better than LogReg but being less computationally expensive than boosting.
@@ -469,11 +461,7 @@ results$Sensitivity <- round(results$Sensitivity, 3)
 knitr::kable(results)
 ```
 
----
-
 # 3. Boosting Model (High Predictive Benchmark)
-
----
 
 ```{r boosting-setup, echo=FALSE, message=FALSE, warning=FALSE}
 library(gbm)
@@ -522,6 +510,9 @@ auc_boost <- auc(roc_boost)
 - Boosting builds many small trees sequentially, each fixing errors from the previous one.
 - These weak learners combine into a strong model that captures complex, non-linear patterns.
 - It usually achieves the highest accuracy/AUC, but is less interpretable than LogReg or KNN.
+
+---
+
 ```{r boosting-viz, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=6}
 plot(
   boost_model$train.error,
@@ -534,11 +525,12 @@ plot(
 )
 ```
 
-
 ## Boosting 2/3: Hyperparameter Tuning 
 - We tuned the number of trees using OOB error estimation to prevent overfitting.
 - The OOB method selected **`r best_trees`** trees as optimal.
 - This choice balances model complexity and generalization.
+---
+
 ```{r boosting-tuning, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
 # Test different numbers of trees
 M_values <- seq(50, 1500, by = 50)
@@ -580,6 +572,9 @@ text(best_M, max(test_error), paste("Best M =", best_M), pos = 4, col = "red")
 - The final Boosting model achieved the highest AUC and sensitivity among all models tested.
 - Variable Importance Plot shows which features influence predictions most.
 - The importance rankings align with key predictors identified by Logistic Regression.
+
+---
+
 ```{r boosting-results, echo=FALSE, message=FALSE, warning=FALSE}
 # Variable importance
 vi <- summary(boost_model, plotit = FALSE)
@@ -608,7 +603,6 @@ barplot(
 - Logistic, Ridge, and LASSO models performed very similarly in accuracy and AUC, but with lower sensitivity.
 - KNN performed the worst, with the lowest AUC, indicating weak separation between classes.
 
----
 
 ## Model Performance Comparison
 ```{r final-table, echo=FALSE, message=FALSE, warning=FALSE}
@@ -644,7 +638,6 @@ final_results <- data.frame(
 knitr::kable(final_results, digits = 3)
 ```
 
----
 
 ## ROC Curve Comparison
 ```{r final-roc, echo=FALSE, message=FALSE, warning=FALSE}
