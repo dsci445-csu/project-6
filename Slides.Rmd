@@ -253,16 +253,18 @@ theme_minimal()
 
 ```
 
-## LogReg: Feature Selection & Linearity  #MUSSA
+
+# 1. Logistic Regression Model
+
+## Feature Selection & Linearity  
 * Initial feature selection was performed using **Backward Stepwise Elimination** on the full model to find the most useful set of main effects.
-* Our selected formula resutled: 
+* Our selected formula resulted: 
 
-$y \sim job + marital + education + balance + housing + $
+$y \sim job + marital + education + balance + housing + loan + contact +$
 
-$loan + contact + day + month + duration + $
+$day + month + duration + campaign + previous+ poutcome$
 
-$campaign + previous+ poutcome$
-* **Residual Plots** were used to assess the linearity assumption for numeric predictors (`age`, `balance`). This led to testing a model with non-linear terms.
+* Residual Plots were used to assess the linearity assumption for numeric predictors (`age`, `balance`). This led to testing a model with non-linear terms.
 
 ---
 
@@ -280,30 +282,30 @@ ggplot(train_data, aes(x = balance, y = residuals)) +
 ```
 
 
-## LogReg: Models with non-linear components and interactions
+## Models with non-linear components and interactions
 * A **quadratic term** $I(\text{balance}^4)$—was added to the formula to reduce the model's bias.
 * We then tested for crucial **interaction terms** (between campaign features and demographics). 
-* Our model had a cross-validated test error rate 0.09846
+* Our model had a cross-validated test error rate `r round(round(cv_error_rate, 5), 4)``
 
 
-## LogReg: Regularization & Tuning   #MUSSA
+## Regularization & Tuning  
 * We explored Ridge and LASSO regularization as an alternative approach for feature selection.
 * **5-Fold Cross-Validation** was used to select the optimal penalty parameter, $\lambda$, which minimized the mean CV error for each regularized model.
 
-```{r, echo=FALSE, results='asis', fig.width=4, fig.height=3}
-
+```{r, echo=FALSE, results='asis', fig.width=5, fig.height=4}
 plot(cv.ridge) 
 plot(cv.lasso)
 ```
 
-## LogReg: Evaluation & Coefficients  #MUSSA
+## Evaluation 
 * The final selected LogReg model was evaluated on the 5-fold CV error rate, along with metrics focused on the confusion matrix.
-* Models performed relatively similar. We would prefer a model with higher **sensitivity** (few false negatives)
+* Models performed relatively similar. We would prefer a model with higher *sensitivity* (few false negatives)
 
 ```{r, echo=FALSE, results='asis'}
 metrics$AUC <- auc_values[, ncol(auc_values)]
 metrics %>% kable()
 ```
+
 
 # 2. K-Nearest Neighbors (KNN) Model
 
@@ -663,6 +665,7 @@ ggplot(roc_all, aes(x = fpr, y = tpr, color = Model)) +
   theme(legend.position = "right")
 ```
 
+
 ## Business Impact
 * The central trade-off: Boosting is the best predictor, but the **Regularized Logistic Regression** offers the most *interpretable* and *actionable* insights for the bank.
 * Sample coefficients: $\beta_{Balance^2}$ = -23.02, $\beta_{Housing}$ = -0.65, $\beta_{JobStudent}$ = 4.064
@@ -672,8 +675,8 @@ ggplot(roc_all, aes(x = fpr, y = tpr, color = Model)) +
 
 ## Discussion
 * Consideration: regulatory/ethical implications in banking and the need to justify predictions (further supporting the value of interpretability).
-* Advanced train/test splitting methods like **time-series analysis** were not used.
-* Suggest future improvements: Exploring advanced techniques like **resampling methods** (SMOTE) to handle imbalance better or trying.
+* Advanced train/test splitting methods like *time-series analysis* were not used.
+* Suggest future improvements: Exploring advanced techniques like *resampling methods* (SMOTE) to handle imbalance better or trying.
 
 
 ## References
@@ -683,6 +686,5 @@ ggplot(roc_all, aes(x = fpr, y = tpr, color = Model)) +
 ```{r image, echo=FALSE, fig.align='center'}
 knitr::include_graphics("UCI.png")
 ```
-
 
 
