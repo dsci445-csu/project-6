@@ -1,6 +1,6 @@
 ---
 title: "Statistical Machine Learning Models on A Bank Marketing dataset"
-author: "Sandra, Tigist, Mussa Hassen, Waddah"
+author: "Sandra Afrifa, Tigist Kefelew, Mussa Hassen, Waddah"
 subtitle: 'Colorado State University, DSCI 445: Statistical Machine Learning, Dr.Andee
   Kaplan'
 output:
