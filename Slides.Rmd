@@ -159,6 +159,7 @@ auc_values <- data.frame(
 - Improving predictive accuracy would allow the bank to target fewer customers, reduce costs, and increase return on investment (ROI) for future campaigns.
 
 --- 
+
 ```{r, echo=FALSE}
 library(ggplot2)
 
@@ -529,6 +530,7 @@ plot(
 - We tuned the number of trees using OOB error estimation to prevent overfitting.
 - The OOB method selected **`r best_trees`** trees as optimal.
 - This choice balances model complexity and generalization.
+
 ---
 
 ```{r boosting-tuning, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}

@@ -9,6 +9,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
+<meta name="author" content="Sandra, Tigist, Mussa, Waddah" />
 
 
 <title>draft_group-6</title>
@@ -1620,6 +1621,7 @@ display: none;
 
 
 <h1 class="title toc-ignore">draft_group-6</h1>
+<h4 class="author">Sandra, Tigist, Mussa, Waddah</h4>
 
 </div>
 
@@ -1629,56 +1631,137 @@ and results of your project, complete with references. (<a href="https://dsci445
 <div id="outline" class="section level1">
 <h1>Outline</h1>
 <div id="motivation" class="section level2">
-<h2>motivation</h2>
+<h2>Motivation</h2>
 <p>(13% of the content)<br />
 The Bank Marketing dataset contains information collected from a
 Portuguese banking institution during multiple direct telemarketing
 campaigns (source1). <em>Why??</em> (We want to justify the efforts of
-modeling this data)</p>
+modeling this data, then whwy it needs to be accurate)</p>
 <p><strong>Description of dataset</strong><br />
-Each row represents an individual client that was contacted in an
-attempt to sell a long-term deposit product. The dataset includes 16
-predictor variables describing client demographics, financial
-attributes, and details about the marketing campaign itself (such as:
-contact method, call duration, number of contacts, outcome of previous
-campaigns). These variables are a mix of categorical and quantitative
-data, which makes this dataset well-suited for comparing multiple
-classification models. The target variable indicates whether the client
-subscribed to a term deposit (yes/no). As usual, the majority of clients
-do not subscribe (source 2). This causes an imbalance in our data by
-increasing modeling bias.</p>
-<p><strong>Problem statement/Assumptions</strong><br />
-We can go over what we are focusing on and what factors we may
-ignore.</p>
-<p>We would like to maintain interpretability in our model. Emphasis is
-predicated for the model to provide actionable insght to the manager.
-After all humans love stories.</p>
+Each observation in the dataset corresponds to a single client contacted
+during the bank’s telemarketing campaigns. The dataset includes 16
+predictor variables, which cover:</p>
+<ul>
+<li>Demographics: age, occupation, marital status, education</li>
+<li>Financial indicators: loan status, credit history, average account
+balance</li>
+<li>Marketing campaign features: type of contact, month/day of contact,
+call duration</li>
+<li>Past campaign outcomes: number of previous contacts and whether they
+were successful</li>
+</ul>
+<p>These variables include both categorical and quantitative features,
+making the dataset suitable for comparing a variety of classification
+methods.</p>
+<p>The target variable, y, is a binary indicator specifying whether the
+client subscribed to a term deposit (yes/no). As is typical in marketing
+data, the positive class (“yes”) is rare, meaning most clients do not
+subscribe (source 2). This creates a class imbalance, which can bias
+models toward predicting the majority class unless addressed
+appropriately.</p>
+<p><strong>Problem Statement/Assumptions</strong><br />
+The goal of this project is to build statistical models that can predict
+whether a client will subscribe to a term deposit based on their
+demographic, financial, and campaign-related characteristics. This is a
+binary classification problem.</p>
+<p>Our focus is on models that provide both good predictive performance
+and interpretability, since managers need results they can explain and
+translate into marketing strategies. Interpretability is especially
+valuable in domains such as banking, where decisions must be justified
+for ethical, customer-centric, and regulatory reasons.</p>
+<p>To keep the scope focused, we make several simplifying
+assumptions:</p>
+<ul>
+<li>We treat all observations as independent, even though clients may
+appear in multiple campaigns.</li>
+<li>We do not use time-series methods, even though campaign month/day
+could be part of a temporal structure.</li>
+<li>We prioritize models covered in class, especially those that
+illustrate differences in linearity, flexibility, and underlying
+assumptions (e.g., covariance structure for LDA and QDA).</li>
+<li>We assume the data used for modeling reflects the population
+targeted by the campaign, meaning the model can be applied to future
+clients with similar characteristics.</li>
+</ul>
+<p>These choices allow us to compare several classification approaches
+under a consistent framework.</p>
 </div>
 <div id="methodology" class="section level2">
-<h2>methodology</h2>
-<p>(60%)</p>
+<h2>Methodology</h2>
+<div id="data-wrangling-and-cleaning" class="section level4">
+<h4>Data Wrangling and Cleaning:</h4>
+<p>We began by loading the dataset, converting categorical variables
+into factors, and identifying “unknown” levels used in place of missing
+data. We evaluated several approaches to handling these values—including
+keeping “unknown” as its own category and treating them as missing, but
+ultimately selected the method that preserved the most information
+without distorting class balance.</p>
+<p>A train/test split was created, and all models were trained using the
+same set of cleaned predictors for fair comparison.</p>
+</div>
+<div id="models-considered" class="section level3">
+<h3>Models Considered:</h3>
+<p>We evaluated five main models from the course:</p>
 <ul>
-<li>Data wrangling/cleaning</li>
-<li>For each model (Logistic, LDA, QDA, KNN, Boosting )
-<ul>
-<li>Model Formulation (training data, with k-fold CV)</li>
-<li>Feature Selection and model tuning (subset, regularization,
-dimension reduction)</li>
-</ul></li>
+<li><p>Logistic Regression — A linear classifier that estimates the
+log-odds of subscription. It is highly interpretable and provides
+coefficients that can be directly translated into marketing
+insights.</p></li>
+<li><p>K-Nearest Neighbors (KNN) — A nonparametric method that makes
+predictions by finding the k most similar clients. It captures nonlinear
+relationships but can be sensitive to scaling and high-dimensional
+data.</p></li>
+<li><p>Boosting (e.g., AdaBoost or Gradient Boosting) — An ensemble
+method that sequentially builds weak learners to minimize classification
+error. Boosting is often superior in predictive accuracy but is less
+interpretable.</p></li>
 </ul>
+</div>
+<div id="model-training-formulation-and-validation" class="section level3">
+<h3>Model Training, Formulation, and Validation</h3>
+<p>All models were trained using k-fold cross-validation to estimate
+out-of-sample performance. This approach reduces variance and ensures
+that results do not depend on a single train/test split.</p>
+<p>We also carried out: - Feature selection using stepwise regression
+and subset selection for logistic regression - Regularization techniques
+(ridge/lasso) when appropriate - Dimensionality reduction (e.g., PCA) if
+needed to improve KNN performance - Hyperparameter tuning for KNN
+(choice of k)</p>
+<p>This section of the paper will include the formal model equations and
+the details of the validation procedure.</p>
+</div>
 </div>
 <div id="results" class="section level2">
-<h2>results</h2>
-<p>(25%)</p>
-<ul>
-<li>Model comparison and assessment (Test error, confusion matrix, AUC,
-BIC, etc.)</li>
-<li>Discussion (make inferrences, determine the favored model)</li>
-</ul>
+<h2>Results</h2>
+<p>Once our models are trained, we will compare their performance using
+test error rate, confusion matrices, and metrics such as accuracy,
+recall, and AUC. Because the dataset is imbalanced, we expect recall and
+AUC to be especially important for evaluating how well each model
+identifies clients who subscribe.</p>
+<p>We will also create ROC curves to compare models visually and use
+information criteria (AIC/BIC) for parametric models where appropriate.
+After summarizing these results, we will determine which model performs
+best overall and which provides the most useful insights for guiding
+future marketing decisions</p>
+</div>
+<div id="discussion" class="section level2">
+<h2>Discussion</h2>
+<p>Since we are still exploring the dataset and fitting our models, we
+have not yet determined which classification method will perform best.
+However, based on the structure of the Bank Marketing data and findings
+from similar studies, we expect that boosting is likely to give the best
+predictive accuracy, while logistic regression will likely be the most
+interpretable and actionable for managers.</p>
+<p>In the final version of this section, we will compare the models
+based on their test performance, interpretability, and robustness to
+class imbalance. We will also discuss any limitations of our approach
+and suggest future improvements, such as trying resampling methods or
+evaluating additional machine learning models.</p>
 </div>
 <div id="references" class="section level2">
-<h2>references</h2>
-<p>(2%)</p>
+<h2>References</h2>
+<p>Dua, D., &amp; Graff, C. (2019). UCI Machine Learning Repository:
+Bank Marketing Dataset. <a href="https://archive.ics.uci.edu/dataset/222/bank+marketing" class="uri">https://archive.ics.uci.edu/dataset/222/bank+marketing</a></p>
 </div>
 </div>
 

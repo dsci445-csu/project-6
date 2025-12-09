@@ -2,9 +2,9 @@
 title: "draft_group-6"
 author: "Sandra, Tigist, Mussa, Waddah"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 ---
 
 *Paper (40%)* A paper detailing the motivation, methodology, and results of your project, complete with references. (https://dsci445-csu.github.io/project/)
