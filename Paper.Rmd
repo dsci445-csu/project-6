@@ -1,41 +1,35 @@
 ---
 title: "draft_group-6"
-author: "Sandra, Tigist, Mussa, Waddah"
+author: "Sandra Afrifa, Tigist Kefelew , Mussa Hassen, Waddah Alaahtani"
 output:
   html_document:
     df_print: paged
   pdf_document: default
 ---
 
-## Motivation
-(13% of the content)\
-The Bank Marketing dataset contains information collected from a Portuguese banking institution during multiple direct telemarketing campaigns (source1). *Why??* (We want to justify the efforts of modeling this data, then whwy it needs to be accurate)
+## Motivation # TT
+Bank Marketing dataset The Bank Marketing dataset was collected by a Portuguese banking institution during a series of direct telemarketing campaigns. These campaigns were done to encourage clients to subscribe to a long-term deposit product. Telemarketing is an expensive and time-consuming process; therefore, the bank would want to know in advance which customers are most likely to subscribe before any more investment takes place. Predictive modeling bears great value in this scenario, as it helps the bank focus resources on only those customers who depict a higher possibility of subscribing.
+In the subscription rate of this dataset, the problem is even more difficult as it is very low. Most individuals say "no," and only a small percentage decides to open a term deposit. If one class is rare, human judgment or simple rules fail to identify those clients who could actually be interested. A well-constructed model may present potential improvements in targeting accuracy, reduce the number of unsuccessful calls, and raise the return on investment. That is why it is necessary to research this dataset and look at which modeling approaches work best.
 
-**Description of dataset** \
-Each observation in the dataset corresponds to a single client contacted during the bank’s telemarketing campaigns. The dataset includes 16 predictor variables, which cover:
+**Description of dataset**  #TT 
+Each entry of the dataset represents one client contacted in one of the bank's telemarketing campaigns. This dataset contains 16 predictors carrying significant information about the client's background, financial situation, and interactions with previous campaigns. These variables fall into several key categories:
+Demographics include such factors as age, occupation, marital status, and education. These help describe who the clients are and often relate to financial behavior or economic stability.
+Financial indicators: Loan status, credit history, and average account balance. These variables describe the client's existing financial commitments and capacity, which may influence their willingness to invest in a long-term product like a term deposit.
+Marketing campaign features include the type of contact: cellular or telephone, month of contact, and day of contact, and duration of the call. These are operational decisions made by the marketing team and may influence a client's likelihood of subscribing. For example, longer call duration sometimes is indicative of higher client engagement.
+Campaign outcomes: Number of previous contacts and if the past interactions have resulted in a successful outcome. These variables highlight whether the client has been interested in the past or has been contacted many times without success.
+The data includes both numerical and categorical variables, and this can serve as a good example to compare the many different classification methods with respect to how each treats different data types: for instance, linear models require the conversion of categorical variables, whereas tree-based or distance-based methods would naturally handle those in different ways. This allows us to explore how each approach might respond to the same set of features.
+The response variable, y, tells whether the client has subscribed to the term deposit or not. Only a small fraction of the contacted clients actually subscribe, therefore this is a strongly imbalanced dataset. The class imbalance is because, in general, marketing datasets are imbalanced since the majority of customers do not respond positively when outreach is performed. This skewness biases models toward the "no" prediction since this prediction would naturally be correct for most of the cases. Therefore, careful handling of this bias will be critical to generate models capable of identifying the small minority of clients who are likely to subscribe-the group that the bank cares most about.
 
-- Demographics: age, occupation, marital status, education
-- Financial indicators: loan status, credit history, average account balance
-- Marketing campaign features: type of contact, month/day of contact, call duration
-- Past campaign outcomes: number of previous contacts and whether they were successful
 
-These variables include both categorical and quantitative features, making the dataset suitable for comparing a variety of classification methods.
-
-The target variable, y, is a binary indicator specifying whether the client subscribed to a term deposit (yes/no). As is typical in marketing data, the positive class (“yes”) is rare, meaning most clients do not subscribe (source 2). This creates a class imbalance, which can bias models toward predicting the majority class unless addressed appropriately.
-
-**Problem Statement/Assumptions** \
-The goal of this project is to build statistical models that can predict whether a client will subscribe to a term deposit based on their demographic, financial, and campaign-related characteristics. This is a binary classification problem.
-
-Our focus is on models that provide both good predictive performance and interpretability, since managers need results they can explain and translate into marketing strategies. Interpretability is especially valuable in domains such as banking, where decisions must be justified for ethical, customer-centric, and regulatory reasons.
-
-To keep the scope focused, we make several simplifying assumptions:
-
-- We treat all observations as independent, even though clients may appear in multiple campaigns.
-- We do not use time-series methods, even though campaign month/day could be part of a temporal structure.
-- We prioritize models covered in class, especially those that illustrate differences in linearity, flexibility, and underlying assumptions (e.g., covariance structure for LDA and QDA).
-- We assume the data used for modeling reflects the population targeted by the campaign, meaning the model can be applied to future clients with similar characteristics.
-
-These choices allow us to compare several classification approaches under a consistent framework.
+**Problem Statement/Assumptions**  #TT
+It is now required to develop statistical models based on the available information in the dataset that will predict with accuracy whether a client will subscribe to a term deposit. This problem is of a binary classification nature, and our work focuses on comparing several models that differ in assumptions, flexibility, and interpretability. Understanding how such models perform is useful to a marketing team for making informed decisions about which clients to contact in future campaigns.
+We focused our attention on well-performing models that give insightful knowledge of which factors drive the choice of a client. In the banking industry, understanding why a model has yielded some prediction is crucial. This supports ethical marketing practices, helps managers explain decisions, and can be important for regulatory compliance. For instance, highly flexible models may perform very well but may not indicate which client characteristics are actually relevant. More interpretable models do not always have the strongest accuracy but can guide marketing strategies more directly.
+We make the following assumptions to keep the analysis focused and manageable:
+Independence of observations: We treat the observations as independent, even though multiple contacts with the same client may appear across different campaigns. This assumption makes the training and evaluation of the models easier, even if some repeated-measure structure in the data is ignored.
+No time-series modeling: variables such as campaign month or day are available within the dataset, which can be considered to hold temporal patterns. However, we do not model this data as a time series. This keeps the focus on cross-sectional relationships between client characteristics and subscription behavior.
+Use of class-relevant models: We restrict our approach to models presented in class because this enables us to contrast multiple concepts, including linear decision boundaries, distance-based approaches, and flexible tree-based structures. This renders the analysis suitable for a course project while still answering substantial questions regarding classification performance.
+Generalization from sample to population: We assume that this dataset is a good representation of the client population to which the bank will offer its services in forthcoming campaigns. If we couldn't assume this, our predictions wouldn't generalize properly to real-world decision-making.
+By selecting these assumptions, we are assured of a standard framework that will allow the comparison of different classification techniques on equal footing. The aim is not only to identify which model performs the best but also to understand how different modeling strategies behave when applied to imbalanced marketing data; this may provide practical insights into how a bank would structure its future campaigns and what features of clients are most relevant for predicting subscription behaviors.
 
 
 ## Methodology 
@@ -53,7 +47,12 @@ We evaluated five main models from the course:
 
 - Logistic Regression — A linear classifier that estimates the log-odds of subscription. It is highly interpretable and provides coefficients that can be directly translated into marketing insights.
 
-- K-Nearest Neighbors (KNN) — A nonparametric method that makes predictions by finding the k most similar clients. It captures nonlinear relationships but can be sensitive to scaling and high-dimensional data.
+- K-Nearest Neighbors (KNN) — A nonparametric method that makes predictions by finding the k most similar clients. It captures nonlinear relationships but can be sensitive to scaling and high-dimensional data. #TT
+
+K-Nearest Neighbors is a nonparametric classification method that predicts an outcome for a new observation by looking at the k most similar clients in the training dataset. Rather than estimating a set of coefficients or assuming any functional form between predictors and the response, KNN makes predictions based purely on proximity in predictor space. This makes the method particularly well-suited when the underlying relationship between predictors and subscription behavior is nonlinear or too complicated for a parametric model to capture.
+Because KNN relies on distance calculations, feature scaling is an important preprocessing step. Otherwise, predictors that are measured on a larger scale-e.g., account balance or call duration-would dominate the distance metric and distort which observations are considered "nearest." In our implementation, we standardized all numeric variables so that each feature was given equal weight in determining the similarity between any two customers. This preprocessing step is especially important for marketing datasets which often involve heterogeneous variables.
+A major modeling decision in KNN, which involves a choice, is the value of k. For small values of k, the classifier is highly flexible and closely follows the training data with a potential risk of overfitting noise. Larger values produce smoother, more stable decision boundaries; however, this has a potential risk of missing the important patterns. We used 5-fold cross-validation to identify the value of k that minimized the estimated test error, balancing the bias-variance trade-off.
+While KNN presents an intuitive method of finding clients with similar profiles, it has several limitations in this context. The performance may suffer for high-dimensional data, with points becoming further apart and distances becoming less informative-the "curse of dimensionality". Second, KNN is less interpretable than models like logistic regression, where the effect of every predictor can be expressed quantitatively. It does, however, provide a useful baseline when assessing the performance of alternative nonlinear classification methods for predicting term deposit subscriptions.
 
 - Boosting (e.g., AdaBoost or Gradient Boosting) — An ensemble method that sequentially builds weak learners to minimize classification error. Boosting is often superior in predictive accuracy but is less interpretable.
 
