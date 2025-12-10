@@ -1,11 +1,6 @@
 ---
-<<<<<<< HEAD
-title: "Statistical Machine Learning Models on A Bank Marketing dataset"
-author: "Sandra Afrifa, Tigist Kefelew, Mussa Hassen, Waddah"
-=======
 title: "Statistical Machine Learning Models on A Bank Marketing Dataset"
-author: "Sandra, Tigist, Mussa Hassen, Waddah"
->>>>>>> 3cba5d87ecc4b182df846f623bf65cd0be1c5f63
+author: "Sandra Afrifa, Tigist Kefelew, Mussa Hassen, Waddah Alaahtani"
 subtitle: 'Colorado State University, DSCI 445: Statistical Machine Learning, Dr.Andee
   Kaplan'
 output:
@@ -158,27 +153,10 @@ auc_values <- data.frame(
 ```
 
 
-## Project Motivation & Business Problem (S)
+## Project Motivation & Business Problem
 - Telemarketing campaigns are expensive, time-consuming, and have very low success rates. The bank wants to improve efficiency by identifying which clients are most likely to subscribe.
 - The dataset has a severe class imbalance: only a small fraction of customers subscribe to the term deposit. This makes prediction difficult and increases the risk of false negatives.
 - Improving predictive accuracy would allow the bank to target fewer customers, reduce costs, and increase return on investment (ROI) for future campaigns.
-
---- 
-
-```{r, echo=FALSE}
-library(ggplot2)
-
-ggplot(bank_full, aes(x = y, fill = y)) +
-geom_bar() +
-scale_fill_manual(values = c("#2E86C1", "#F39C12")) +
-labs(
-title = "Term Deposit Subscription (Severe Class Imbalance)",
-x = "Subscribed?",
-y = "Count"
-) +
-theme_minimal(base_size = 14)
-
-```
 
 
 ## The Bank Marketing Dataset
@@ -224,7 +202,7 @@ knitr::include_graphics("EDA/campaign_plot.png")
 ```
 
 
-## Methodology: Data Preparation (Slide 5) (s)
+## Methodology: Data Preparation
 
 - Converted all categorical variables into factors so models interpret them correctly.
 - Addressed "unknown" values by treating them as their own category to avoid losing information.
@@ -264,7 +242,7 @@ $day + month + duration + campaign + previous+ poutcome$
 
 ---
 
-```{r residuals_slide, echo=FALSE, results='asis'}
+```{r residuals_slide, echo=FALSE, fig.align="center", results='asis'}
 residuals <- residuals(glm.baseline, type = "deviance")
 train_data$residuals <- residuals
 
@@ -311,7 +289,7 @@ metrics %>% kable()
 * The non-parametric nature means **no explicit feature selection** via coefficients, but the scaling step is vital for ensuring equal contribution from all dimensions.
 
 
-```{r knn-prep, echo=FALSE, message=FALSE, warning=FALSE}
+```{r knn-prep, echo=FALSE, message=FALSE, fig.align="center", warning=FALSE}
 library(dplyr)
 library(class)
 library(caret)
@@ -361,7 +339,7 @@ knn_accuracy_demo <- mean(knn_pred_demo == test_y)
 * **5-Fold Cross-Validation** was performed across a range of $k$ values to find the optimal $k$ that minimized the mean CV error.
 
 
-```{r knn-tuning, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+```{r knn-tuning, echo=FALSE, message=FALSE, fig.align="center", warning=FALSE, cache=TRUE}
 set.seed(445)
 
 k_values <- seq(1, 25, by = 2)
@@ -415,7 +393,7 @@ text(best_k, max(cv_error), paste("Best k =", best_k), pos = 4, col = "red")
 * KNN generally provides a good intermediate balance—often capturing non-linearity better than LogReg but being less computationally expensive than boosting.
 
 
-```{r knn-results, echo=FALSE, message=FALSE, warning=FALSE}
+```{r knn-results, echo=FALSE, message=FALSE, fig.align="center",  out.width="75%", warning=FALSE}
 library(pROC)
 
 knn_final <- knn(
@@ -458,9 +436,9 @@ results$Sensitivity <- round(results$Sensitivity, 3)
 knitr::kable(results)
 ```
 
-# 3. Boosting Model (High Predictive Benchmark)
+# 3. Boosting Tress Model 
 
-```{r boosting-setup, echo=FALSE, message=FALSE, warning=FALSE}
+```{r boosting-setup, echo=FALSE, fig.align="center", message=FALSE, warning=FALSE}
 library(gbm)
 library(pROC)
 library(caret)
@@ -502,7 +480,7 @@ roc_boost <- roc(test_data$y, boost_prob)
 auc_boost <- auc(roc_boost)
 ```
 
-## Boosting 1/3: Model Formulation
+## Boosting: Model Formulation
 
 - Boosting builds many small trees sequentially, each fixing errors from the previous one.
 - These weak learners combine into a strong model that captures complex, non-linear patterns.
@@ -510,7 +488,7 @@ auc_boost <- auc(roc_boost)
 
 ---
 
-```{r boosting-viz, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=6}
+```{r boosting-viz, echo=FALSE, message=FALSE, warning=FALSE, fig.align="center", out.width="80%"}
 plot(
   boost_model$train.error,
   type = "l",
@@ -522,14 +500,14 @@ plot(
 )
 ```
 
-## Boosting 2/3: Hyperparameter Tuning 
+## Boosting: Hyperparameter Tuning 
 - We tuned the number of trees using OOB error estimation to prevent overfitting.
-- The OOB method selected **`r best_trees`** trees as optimal.
+- The OOB method selected 1100 trees as optimal.
 - This choice balances model complexity and generalization.
 
 ---
 
-```{r boosting-tuning, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+```{r boosting-tuning, echo=FALSE, message=FALSE, warning=FALSE, fig.align="center", out.width="75%", cache=TRUE}
 # Test different numbers of trees
 M_values <- seq(50, 1500, by = 50)
 test_error <- numeric(length(M_values))
@@ -566,7 +544,7 @@ text(best_M, max(test_error), paste("Best M =", best_M), pos = 4, col = "red")
 
 **Optimal number of trees (via test error):** `r best_M`
 
-## Boosting 3/3: Evaluation & Importance 
+## Boosting: Evaluation & Importance 
 - The final Boosting model achieved the highest AUC and sensitivity among all models tested.
 - Variable Importance Plot shows which features influence predictions most.
 - The importance rankings align with key predictors identified by Logistic Regression.
@@ -638,7 +616,7 @@ knitr::kable(final_results, digits = 3)
 
 
 ## ROC Curve Comparison
-```{r final-roc, echo=FALSE, message=FALSE, warning=FALSE}
+```{r final-roc, echo=FALSE, message=FALSE, fig.align="center", warning=FALSE}
 roc_all <- rbind(
   data.frame(fpr = 1 - roc_baseline$specificities, tpr = roc_baseline$sensitivities, Model = "Logistic"),
   data.frame(fpr = 1 - roc_ridge$specificities,    tpr = roc_ridge$sensitivities,    Model = "Ridge"),
