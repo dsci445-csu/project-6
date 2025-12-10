@@ -306,11 +306,10 @@ metrics %>% kable()
 
 # 2. K-Nearest Neighbors (KNN) Model
 
-## KNN 1/3: Feature Preparation 
+## KNN: Feature Preparation 
 * **KNN** requires scaling: all numeric predictors were **standardized** (mean=0, SD=1) to prevent features with larger scales from dominating the distance calculation.
 * The non-parametric nature means **no explicit feature selection** via coefficients, but the scaling step is vital for ensuring equal contribution from all dimensions.
 
---- 
 
 ```{r knn-prep, echo=FALSE, message=FALSE, warning=FALSE}
 library(dplyr)
@@ -357,11 +356,10 @@ knn_accuracy_demo <- mean(knn_pred_demo == test_y)
 
 **Test Accuracy (k=5):** `r round(knn_accuracy_demo * 100, 2)`%
 
-## KNN 2/3: Hyperparameter Tuning 
+## KNN: Hyperparameter Tuning 
 * The sole hyperparameter, **$k$** (the number of neighbors), determines the model's complexity (i.e., the bias-variance trade-off).
 * **5-Fold Cross-Validation** was performed across a range of $k$ values to find the optimal $k$ that minimized the mean CV error.
 
----
 
 ```{r knn-tuning, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
 set.seed(445)
@@ -412,11 +410,10 @@ text(best_k, max(cv_error), paste("Best k =", best_k), pos = 4, col = "red")
 
 **Optimal k:** `r best_k`
 
-## KNN 3/3: Evaluation & Test Performance
+## KNN: Evaluation & Test Performance
 * The final KNN model (with optimal $k$) was applied to the **Test Set**. We evaluate performance using **AUC** and compare it to the LogReg models.
 * KNN generally provides a good intermediate balance—often capturing non-linearity better than LogReg but being less computationally expensive than boosting.
 
----
 
 ```{r knn-results, echo=FALSE, message=FALSE, warning=FALSE}
 library(pROC)
