@@ -1,6 +1,6 @@
 ---
 title: "Statistical Machine Learning Models on A Bank Marketing Dataset"
-author: "Sandra Afrifa, Tigist Kefelew, Mussa Hassen, Waddah Alaahtani"
+author: "Sandra Afrifa, Tigist Kefelew, Mussa Hassen, Waddah Alqahtani"
 subtitle: 'Colorado State University, DSCI 445: Statistical Machine Learning, Dr.Andee
   Kaplan'
 output:
@@ -170,8 +170,17 @@ auc_values <- data.frame(
 
 * **Most clients say NO; only ≈11% say YES**
 
-```{r slide2-plot, echo=FALSE, fig.align="center", out.width="75%"}
-knitr::include_graphics("EDA/imbalance_plot.png")
+```{r imbalance-plot, echo=FALSE, fig.align="center", out.width="75%"}
+ggplot(bank_full, aes(x = y, fill = y)) +
+  geom_bar(color = "white") +
+  scale_fill_manual(values = c("no" = "grey60", "yes" = "forestgreen")) +
+  labs(
+    title = "Distribution of Term Deposit Subscription",
+    x = "Subscribed?",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
 ```
 
 
@@ -179,8 +188,17 @@ knitr::include_graphics("EDA/imbalance_plot.png")
 
 * Cell phone calls perform best
 
-```{r eda1-plot, echo=FALSE, fig.align="center", out.width="75%"}
-knitr::include_graphics("EDA/contact_plot.png")
+```{r contact-plot, echo=FALSE, fig.align="center", out.width="75%"}
+ggplot(bank_full, aes(x = contact, fill = y)) +
+  geom_bar(position = "fill", color = "white") +
+  scale_fill_manual(values = c("no" = "grey60", "yes" = "forestgreen")) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Subscription Rate by Contact Method",
+    x = "Contact Method",
+    y = "Proportion (Yes)"
+  ) +
+  theme_minimal(base_size = 14)
 ```
 
 
@@ -188,8 +206,17 @@ knitr::include_graphics("EDA/contact_plot.png")
 
 * Past success predicts new success
 
-```{r eda2-plot, echo=FALSE, fig.align="center", out.width="68%"}
-knitr::include_graphics("EDA/poutcome_plot.png")
+```{r poutcome-plot, echo=FALSE, fig.align="center", out.width="70%"}
+ggplot(bank_full, aes(x = poutcome, fill = y)) +
+  geom_bar(position = "fill", color = "white") +
+  scale_fill_manual(values = c("no" = "grey60", "yes" = "forestgreen")) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Subscription Rate by Previous Outcome",
+    x = "Previous Outcome",
+    y = "Proportion (Yes)"
+  ) +
+  theme_minimal(base_size = 14)
 ```
 
 
@@ -197,8 +224,20 @@ knitr::include_graphics("EDA/poutcome_plot.png")
 
 * More calls = worse results
 
-```{r eda3-plot, echo=FALSE, fig.align="center", out.width="75%"}
-knitr::include_graphics("EDA/campaign_plot.png")
+```{r campaign-plot, echo=FALSE, fig.align="center", out.width="75%"}
+bank_full %>%
+  group_by(campaign) %>%
+  summarise(success_rate = mean(y == "yes")) %>%
+  ggplot(aes(x = campaign, y = success_rate)) +
+  geom_line(color = "steelblue", linewidth = 1.2) +
+  geom_point(color = "darkorange", size = 3) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Success Rate vs. Number of Campaign Contacts",
+    x = "Number of Contacts",
+    y = "Success Rate"
+  ) +
+  theme_minimal(base_size = 14)
 ```
 
 
