@@ -1,10 +1,8 @@
 ---
-title: "draft_group-6"
+title: "DSCI 445 Final Report"
+subtitle: "Machine Learning Models on A Bank Marketing Dataset"
 author: "Sandra Afrifa, Tigist Kefelew , Mussa Hassen, Waddah Alaahtani"
-output:
-  html_document:
-    df_print: paged
-  pdf_document: default
+output: pdf_document
 ---
 
 ## Motivation # TT
