@@ -95,6 +95,50 @@ glm.baseline <- glm(selected_formula, data = train_data, family = "binomial")
 summary(glm.baseline)
 ```
 
+
+```{r}
+ctrl <- trainControl(
+  method = "cv",
+  number = 5,
+  classProbs = TRUE, 
+  summaryFunction = twoClassSummary 
+)
+
+set.seed(445)
+cv_fit <- train(
+  selected_formula, 
+  data = train_data, 
+  method = "glm", 
+  family = "binomial",
+  trControl = ctrl, 
+  metric = "ROC" 
+)
+
+print(cv_fit)
+
+
+test_probabilities <- predict(
+  glm.baseline, 
+  newdata = test_data, 
+  type = "response"
+)
+
+
+test_predictions <- factor(
+  ifelse(test_probabilities > 0.5, "yes", "no"),
+  levels = levels(test_data$y)
+)
+
+conf_matrix <- confusionMatrix(
+  data = test_predictions, 
+  reference = test_data$y, 
+  positive = "yes" 
+)
+
+print(conf_matrix)
+
+```
+
 Assessing Non-Linearity with Residuals
 A fundamental assumption in logistic regression is the linearity in the log-odds. We check this assumption for the continuous predictors by plotting the deviance residuals against the predictor values. Systematic deviation of the LOESS (locally estimated scatterplot smoothing) curve from zero suggests a need for a non-linear transformation or a more flexible model.
 
@@ -122,12 +166,13 @@ The plot of the deviance residuals against balance shows that the LOESS curve de
 glm.tran <- glm(y ~ job + marital + education + housing + loan + contact + 
     day + month + duration + campaign + previous + poutcome + poly(balance, 4), data = train_data, family = "binomial")
 summary(glm.tran)
+tran.coef <- summary(glm.tran)$coef
 
 
 residuals <- residuals(glm.tran, type = "deviance")
 train_data$residuals <- residuals
 
-ggplot(train_data, aes(x = balance, y = residuals)) +
+p2 <- ggplot(train_data, aes(x = balance, y = residuals)) +
   geom_point(alpha = 0.5) +
   geom_smooth(method = "loess", color = "red", se = FALSE) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "blue") +
@@ -204,7 +249,7 @@ lambda.min.lasso <- cv.lasso$lambda.min
 plot(cv.lasso)
 ```
 
-The LASSO plot similarly uses cross-validation to select the optimal $\lambda_{\min}$, r round(lambda.min.lasso, 5). Unlike Ridge, the LASSO is expected to yield a more parsimonious model by excluding irrelevant predictors entirely. 
+The LASSO plot similarly uses cross-validation to select the optimal $\lambda_{\min}$, `r round(lambda.min.lasso, 5)`. Unlike Ridge, the LASSO is expected to yield a more parsimonious model by excluding irrelevant predictors entirely. 
 
 
 
