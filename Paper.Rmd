@@ -5,49 +5,302 @@ author: "Sandra Afrifa, Tigist Kefelew , Mussa Hassen, Waddah Alaahtani"
 output: pdf_document
 ---
 
-## Motivation # TT
-Bank Marketing dataset The Bank Marketing dataset was collected by a Portuguese banking institution during a series of direct telemarketing campaigns. These campaigns were done to encourage clients to subscribe to a long-term deposit product. Telemarketing is an expensive and time-consuming process; therefore, the bank would want to know in advance which customers are most likely to subscribe before any more investment takes place. Predictive modeling bears great value in this scenario, as it helps the bank focus resources on only those customers who depict a higher possibility of subscribing.
+```{r, include=FALSE}
+library(readr)
+library(tidyverse)
+library(boot)
+library(glmnet)
+library(caret)
+library(pROC)
+library(MASS)
+library(ggplot2)
+library(dplyr)
 
-In the subscription rate of this dataset, the problem is even more difficult as it is very low. Most individuals say "no," and only a small percentage decides to open a term deposit. If one class is rare, human judgment or simple rules fail to identify those clients who could actually be interested. A well-constructed model may present potential improvements in targeting accuracy, reduce the number of unsuccessful calls, and raise the return on investment. That is why it is necessary to research this dataset and look at which modeling approaches work best.
+set.seed(445) 
 
-**Description of dataset**  #TT 
-Each entry of the dataset represents one client contacted in one of the bank's telemarketing campaigns. This dataset contains 16 predictors carrying significant information about the client's background, financial situation, and interactions with previous campaigns. These variables fall into several key categories:
-Demographics include such factors as age, occupation, marital status, and education. These help describe who the clients are and often relate to financial behavior or economic stability.
-Financial indicators: Loan status, credit history, and average account balance. These variables describe the client's existing financial commitments and capacity, which may influence their willingness to invest in a long-term product like a term deposit.
+bank_full <- read_delim("data/bank-full_1.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Marketing campaign features include the type of contact: cellular or telephone, month of contact, and day of contact, and duration of the call. These are operational decisions made by the marketing team and may influence a client's likelihood of subscribing. For example, longer call duration sometimes is indicative of higher client engagement.
-Campaign outcomes: Number of previous contacts and if the past interactions have resulted in a successful outcome. These variables highlight whether the client has been interested in the past or has been contacted many times without success.
-
-The data includes both numerical and categorical variables, and this can serve as a good example to compare the many different classification methods with respect to how each treats different data types: for instance, linear models require the conversion of categorical variables, whereas tree-based or distance-based methods would naturally handle those in different ways. This allows us to explore how each approach might respond to the same set of features.
-The response variable, y, tells whether the client has subscribed to the term deposit or not. Only a small fraction of the contacted clients actually subscribe, therefore this is a strongly imbalanced dataset. The class imbalance is because, in general, marketing datasets are imbalanced since the majority of customers do not respond positively when outreach is performed. This skewness biases models toward the "no" prediction since this prediction would naturally be correct for most of the cases. Therefore, careful handling of this bias will be critical to generate models capable of identifying the small minority of clients who are likely to subscribe-the group that the bank cares most about.
-
-
-**Problem Statement/Assumptions**  #TT
-It is now required to develop statistical models based on the available information in the dataset that will predict with accuracy whether a client will subscribe to a term deposit. This problem is of a binary classification nature, and our work focuses on comparing several models that differ in assumptions, flexibility, and interpretability. Understanding how such models perform is useful to a marketing team for making informed decisions about which clients to contact in future campaigns.
-
-We focused our attention on well-performing models that give insightful knowledge of which factors drive the choice of a client. In the banking industry, understanding why a model has yielded some prediction is crucial. This supports ethical marketing practices, helps managers explain decisions, and can be important for regulatory compliance. For instance, highly flexible models may perform very well but may not indicate which client characteristics are actually relevant. More interpretable models do not always have the strongest accuracy but can guide marketing strategies more directly.
-
-We make the following assumptions to keep the analysis focused and manageable:
-Independence of observations: We treat the observations as independent, even though multiple contacts with the same client may appear across different campaigns. This assumption makes the training and evaluation of the models easier, even if some repeated-measure structure in the data is ignored.
-No time-series modeling: variables such as campaign month or day are available within the dataset, which can be considered to hold temporal patterns. However, we do not model this data as a time series. This keeps the focus on cross-sectional relationships between client characteristics and subscription behavior.
-Use of class-relevant models: We restrict our approach to models presented in class because this enables us to contrast multiple concepts, including linear decision boundaries, distance-based approaches, and flexible tree-based structures. This renders the analysis suitable for a course project while still answering substantial questions regarding classification performance.
-
-Generalization from sample to population: We assume that this dataset is a good representation of the client population to which the bank will offer its services in forthcoming campaigns. If we couldn't assume this, our predictions wouldn't generalize properly to real-world decision-making.
-By selecting these assumptions, we are assured of a standard framework that will allow the comparison of different classification techniques on equal footing. The aim is not only to identify which model performs the best but also to understand how different modeling strategies behave when applied to imbalanced marketing data; this may provide practical insights into how a bank would structure its future campaigns and what features of clients are most relevant for predicting subscription behaviors.
+bank_full$y <- factor(bank_full$y, levels = c("no", "yes"))
 
 
-#### Data Wrangling and Cleaning:
-The analysis began by loading the Bank Marketing dataset and converting all categorical predictors into factor variables so they could be properly handled by the statistical modeling procedures in R. Several variables contained “unknown” values, which serve as placeholders rather than true missing observations. Multiple strategies for handling these values were considered, including treating them as missing and excluding the affected observations. Ultimately, “unknown” values were retained as their own category in order to preserve information and avoid altering the underlying class imbalance.
+bank_full <- bank_full %>%
+  mutate(
+    job = as.factor(job),
+    marital = as.factor(marital),
+    education = as.factor(education),
+    default = as.factor(default),
+    housing = as.factor(housing),
+    loan = as.factor(loan),
+    contact = as.factor(contact),
+    month = as.factor(month),
+    poutcome = as.factor(poutcome)) %>% 
+  mutate(previously_contacted = as.factor(ifelse(pdays == -1, "no", "yes")))
 
-An additional feature, previously_contacted, was engineered to address the special coding of the pdays variable, where a value of −1 indicates that a client was not previously contacted. This transformation allowed the model to distinguish between first-time and repeat contacts more clearly.
+## Train/Test split
 
-To evaluate model performance fairly, the dataset was partitioned into an 80% training set and a 20% test set using stratified sampling based on the response variable. This ensured that the original class imbalance was preserved in both subsets. All models were trained on the same cleaned training data and evaluated on the same test data, allowing for direct and unbiased comparison across modeling approaches.
+train_index <- createDataPartition(bank_full$y, p = 0.8, list = FALSE, times = 1)
+train_data <- bank_full[train_index, ]
+test_data  <- bank_full[-train_index, ]
+```
+
+
+## Motivation
+
+Bank telemarketing campaigns are a major channel through which financial institutions promote term deposit products. Thsee marketing campaigns come with a cost and are often inefficient due to low client response rates. 
+Prior work by Moro et al. (2014) discover that client characteristics and campaign related factors strongly influence subscription outcomes. Motivating a data-driven approach to improve targeting and decision-making in bank marketing. 
+In their approach a Portuguese retail bank was studied using campaign data collected between 2008 and 2013. 
+    
+Our dataset was a publicily available dataset, thus had less variables for privacy concerns of the bank customers.
+The Bank Marketing dataset was collected by a Portuguese banking institution during a series of direct telemarketing campaigns. These campaigns were done to encourage clients to subscribe to a long-term deposit product. Telemarketing is an expensive and time-consuming process; therefore, the bank would want to know in advance which customers are most likely to subscribe before any more investment takes place.
+The dataset consists of sixteen variables describing demographic, financial and campaign related variables that enlist individual clients contacted during direct marketing efforts. A list of the 16 variable found below...
+
+* age: Age in years 
+* job: Occupation (Categorical)
+* marital: Marital status (Categorical)
+* education: Highest level of education (Categorical)
+* default: has credit in default? (binary)
+* balance: average yearly balance
+* housing: has housing loan? (binary)
+* loan: has personal loan? (binary)
+* Contract: contact communication type (Categorical)
+* day: last contact day (of the month)
+* month: last contact month of year (month; 1=January)
+* duration: last contact duration, in seconds
+* campaign: number of contacts performed during this campaign and for this client
+* pdays: number of days that passed by after the client was last contacted from a previous campaign (-1 means client was not previously contacted)
+* previous: number of contacts performed before this campaign and for this client
+* poutcome: outcome of the previous marketing campaign (Categorical)
+* y: Indicator of whether the client subscribed a term deposit (Binary target) 
+
+
+The response variable indicates whether a client subscribed to a term deposit which defines a binary classification task. 
+
+Exploratory analysis shows that the numeric predictors (balance, duration, pdays, previously contacted) are heavily skewed.
+Also, analysis reveals substantial class imbalance, in the response variable, which motivates the use of appropriate modeling and evaluation for our classification problem.
+Visualizations of subscription rates by job education marital status contact type and previous outcome reveal variations in client responsiveness across different factors.
+
+*[STREAMLINE Plots and EDA summary HERE]*
+
+Data preprocessing involved converting categorical variables to factors and adding derived variables such as pdays to account for clients not previously contacted. Converting the categorical variables (initilay character type) to factors creates an indicator for each class in the variable (i.e. if job has 20 factors, 20 indicator variables will be considered in the model fit). As for the previously contaced variable (days since previously contacted), customers who haven't been prreviously contacted will recieve a value of -1. This can cause improper modeling of customers, since the variable now takes on the value of negative numbers. Instead we set -1 to zeros and created a new variable to indicate customers that have not been previously coontacted before. These steps ensure that the dataset is suitable for statistical learning models and enable accurate assessment of predictive performance. \
+
+### Problem Statement     
+This study is motivated by the availability of bank marketing datasets that enable comparison of machine learning methods for predicting term deposit subscription behavior.
+
+The specification of the problem begins with the recognition that we are addressing a binary classification task where the goal is to predict whether a client will subscribe to a term deposit based on demographic financial and campaign features. According to the framework presented in Introduction to Statistical Learning (ISLR), the fundamental goal is to estimate the unknown function, f(x) that relates the predictors, X to the response, Y. Some models are highly flexible and can capture complex non-linear relationships between predictors and the response. In most Cases these models achieve higher predictive accuracy. However, these flexible models often suffer from lower interpretability, making it difficult to understand the influence of individual features. Simpler models such as logistic regression are less flexible but provide coefficients that can be directly interpreted in terms of odds ratios, offering insight into feature importance. 
+
+Chapter 5 of Introduction to Statistical Learning emphasizes the importance of obtaining an unbiased estimate of a model’s test error to assess its predictive performance on unseen data. Test error quantifies how well a model generalizes beyond the data used for training, which is critical for selecting among competing models. The chapter presents several methods for estimating test error, including the simple training/test split, K-fold cross validation, and the leave-one-out cross validation (LOOCV) approach. Each method balances bias and variance differently, with cross validation generally providing a lower-variance estimate compared to a single split. These techniques are essential for model selection, tuning hyperparameters, and comparing the expected performance of alternative models. For the Bank Marketing dataset, estimating test error accurately is particularly important due to the class imbalance and the presence of both categorical and numeric predictors, which can influence model generalization.
+
+In the following chpater of Introduction to Statistical Learning focuses on model selection and regularization techniques to improve predictive performance and reduce overfitting. It introduces methods such as subset selection, shrinkage (Ridge and LASSO regression), and dimension reduction to assess and enhance model accuracy while controlling variance. These approaches allow practitioners to identify parsimonious models that generalize well to new data, providing complementary strategies to traditional test error estimation. We apply these concepts to the models we fit on the bank data, to reduce overfitting and ultimately improve the generalization of our models to new clients. \
+
+We start with a logistic regression (described in methodology section), then build up adjustments and regularizations to the logestic regression to make our baseline. We then move to another interpretable model: KNN. This model is considered transperent in a unique, due to it's neighboring factor.
+Finally we fit a Boosting model. This state-of-the-art model is not considered interpretable. Although, there are methods used to extract the contributing variables in such models. We included this model is used to gage how much accucracy we are sacrificing for interpretability. 
+
+The authors employed time ordered data splitting rolling window evaluation. For feature enrichment, they implimented a semi-automatic approach including external intuitive knowledge from domain experts (bank manager) to optimize features. They compared Logistic regression with Decission trees, SVMs, and Neural networks; all complex 'black-box' models. While Moro et al. prioritized maximizing classification performance, our approach also examines model simplicity, automatic feature selection, and diagnostic checks for appropriate classifications (from confusion matrices).
+
+
+## Methodology
+For each of our models we implement a k-fold CV approach, with k=5 training/test split to maintain the distribution of the response variable across the sets. Our models do not apply time-series modeling, since our data does not include sequintial variables. Although variables such as campaign month or day are available within the dataset, which can be considered to hold temporal patterns, we do not model this data as a time series. This keeps the focus on cross-sectional relationships between client characteristics and subscription behavior.
+
+1. **Logistic regression**
+
+```{r, include=FALSE}
+full_formula <- y ~ age + job + marital + education + default + balance + 
+  housing + loan + contact + day + month + duration + campaign + 
+  pdays + previous + poutcome + previously_contacted
+
+glm.full <- glm(full_formula, data = train_data, family = "binomial")
+
+# Perform backward selection
+glm.step <- step(glm.full, direction = "backward", trace = 0)
+
+
+selected_formula <- formula(glm.step)
+
+
+## 
+glm.baseline <- glm(selected_formula, data = train_data, family = "binomial")
+summary(glm.baseline)
+
+ctrl <- trainControl(
+  method = "cv",
+  number = 5,
+  classProbs = TRUE, 
+  summaryFunction = twoClassSummary 
+)
+
+set.seed(445) 
+cv_fit <- train(
+  selected_formula, 
+  data = train_data, 
+  method = "glm", 
+  family = "binomial",
+  trControl = ctrl, 
+  metric = "ROC" 
+)
+
+test_probabilities <- predict(glm.baseline, newdata = test_data, type = "response")
+test_predictions <- factor(ifelse(test_probabilities > 0.5, "yes", "no"), levels = levels(test_data$y))
+
+conf_matrix <- confusionMatrix(data = test_predictions, reference = test_data$y, positive = "yes" )
+
+
+
+# Extract deviance residuals
+residuals <- residuals(glm.baseline, type = "deviance")
+train_data$residuals <- residuals
+
+p1 <- ggplot(train_data, aes(x = balance, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess", color = "red", se = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "blue") +
+  labs(title = "Deviance Residuals vs. Balance",
+       y = "Deviance Residuals") +
+  theme_minimal()
+
+glm.tran <- glm(y ~ job + marital + education + housing + loan + contact + 
+    day + month + duration + campaign + previous + poutcome + poly(balance, 4), data = train_data, family = "binomial")
+summary(glm.tran)
+tran.coef <- summary(glm.tran)$coef
+
+residuals <- residuals(glm.tran, type = "deviance")
+train_data$residuals <- residuals
+
+p2 <- ggplot(train_data, aes(x = balance, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess", color = "red", se = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "blue") +
+  labs(title = "Deviance Residuals vs. Balance",
+       y = "Deviance Residuals") +
+  theme_minimal()
+
+
+## Regularization
+X_full <- model.matrix(y ~ . - 1, data = bank_full)
+Y_full <- as.numeric(bank_full$y) - 1 
+
+X_train <- X_full[train_index, ]
+Y_train <- Y_full[train_index] 
+
+X_test <- X_full[-train_index, ]
+Y_test <- Y_full[-train_index] 
+
+
+cv.ridge <- cv.glmnet(X_train, Y_train, 
+                      alpha = 0, 
+                      family = "binomial", 
+                      type.measure = "class")
+lambda.min.ridge <- cv.ridge$lambda.min
+
+cv.lasso <- cv.glmnet(X_train, Y_train, 
+                      alpha = 1, 
+                      family = "binomial", 
+                      type.measure = "class")
+lambda.min.lasso <- cv.lasso$lambda.min
+
+baseline_prob <- predict(glm.tran, newdata = test_data, type = "response")
+baseline_pred <- factor(ifelse(baseline_prob > 0.5, "yes", "no"), levels = c("no", "yes"))
+
+ridge_prob <- predict(cv.ridge, s = lambda.min.ridge, newx = X_test, type = "response")
+ridge_pred <- factor(ifelse(ridge_prob > 0.5, "yes", "no"), levels = c("no", "yes"))
+
+lasso_prob <- predict(cv.lasso, s = lambda.min.lasso, newx = X_test, type = "response")
+lasso_pred <- factor(ifelse(lasso_prob > 0.5, "yes", "no"), levels = c("no", "yes"))
+
+
+cm_baseline <- confusionMatrix(baseline_pred, test_data$y, positive = "yes")
+cm_ridge <- confusionMatrix(ridge_pred, test_data$y, positive = "yes")
+cm_lasso <- confusionMatrix(lasso_pred, test_data$y, positive = "yes")
+
+metrics <- data.frame(
+  Model = c("Baseline Logit", "Ridge Logit", "LASSO Logit"),
+  Accuracy = c(cm_baseline$overall['Accuracy'], cm_ridge$overall['Accuracy'], cm_lasso$overall['Accuracy']),
+  Sensitivity = c(cm_baseline$byClass['Sensitivity'], cm_ridge$byClass['Sensitivity'], cm_lasso$byClass['Sensitivity']),
+  Specificity = c(cm_baseline$byClass['Specificity'], cm_ridge$byClass['Specificity'], cm_lasso$byClass['Specificity'])
+)
+
+
+roc_baseline <- roc(test_data$y, baseline_prob)
+roc_ridge <- roc(test_data$y, as.numeric(ridge_prob))
+roc_lasso <- roc(test_data$y, as.numeric(lasso_prob))
+
+roc_data <- data.frame(
+  fpr = c(1 - roc_baseline$specificities, 1 - roc_ridge$specificities, 1 - roc_lasso$specificities),
+  tpr = c(roc_baseline$sensitivities, roc_ridge$sensitivities, roc_lasso$sensitivities),
+  Model = factor(c(rep("Baseline Logit", length(roc_baseline$specificities)),
+                   rep("Ridge Logit", length(roc_ridge$specificities)),
+                   rep("LASSO Logit", length(roc_lasso$specificities))),
+                 levels = c("Baseline Logit", "Ridge Logit", "LASSO Logit"))
+)
+
+```
+
+Logistic regression is used to model the probability of a binary outcome as a function of predictor variables. The model estimates the probability that a client subscribes to a term deposit, $P(Y=1 \mid X)$. This model fits with assumptions of independent observations and normality.
+
+Formula: $$f(x) = P(Y=1 \mid \mathbf{x}) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 x_1 + \dots + \beta_k x_k)}}$$  
+Coefficients are estimated using the maximum likelihood method, which finds the parameter values that maximize the likelihood of observing the training data (ISLR). 
+
+Feature selection is performed using backward stepwise selection to identify a parsimonious subset of predictors that minimizes estimated test error as measured by AIC. Variables such as duration and previous marketing outcomes remain in the model due to their strong predictive power, whereas less informative variables are excluded to reduce variance. Categorical predictors are converted to factors, and a new binary variable previously_contacted is created to handle clients with no prior campaign contact. This preprocessing ensures that the data is suitable for statistical modeling and facilitates accurate interpretation of model coefficients. We resulted 12 features:
+
+```{r}
+selected_formula
+```
+
+Cross validation is used to select optimal tuning parameters for these regularized models and to estimate the expected test error. Confusion matrices, sensitivity, specificity, and ROC/AUC metrics are computed to assess predictive performance, especially given the class imbalance where non-subscribers are the majority. This model performed will with mean 5-fold CV test error metrics:
+
+```{r, echo=FALSE}
+print(conf_matrix)
+```
+
+Next, we check for potential non-linearity in continuous predictors from our predictors remaining after back-ward stepwise selection. We plotted deviance residuals against numeric features.
+Based on residual diagnostics, we incorporated a polynomial term (using the poly function: *poly(balance, 4)*) for balance to account for non-linear effects. The Balance squared and power 4 term produced significant coefficients (Last 4 on the list of coefficients).
+
+```{r, out.width="45%", echo=FALSE}
+p1
+p2
+```
+
+```{r}
+tran.coef
+```
+
+Although this polynomial transformation didn't provide desired metrics in expense of the nonlinear effect. From the deviance residual plots we can observe there weren't significant deviance from a normal residual line. We will not include this model in our comparison.
+
+
+Regularization techniques such as Ridge ($\ell_2$ penalty) and LASSO ($\ell_1$ penalty) are employed to reduce variance and perform feature selection, particularly in the presence of correlated predictors. LASSO (Least Absolute Shrinkage and Selection Operator) regression uses an $\ell_1$ penalty ($\alpha=1$). A key property of the LASSO is that it forces the coefficients of some variables to be exactly zero, thereby performing automatic feature selection (Chapter 6). The LASSO plot similarly uses cross-validation to select the optimal $\lambda_{\min}$, `r round(lambda.min.lasso, 5)`. Unlike Ridge, the LASSO is expected to yield a more parsimonious model by excluding irrelevant predictors entirely. 
+
+```{r, out.width="45%", echo=FALSE}
+plot(cv.ridge)
+plot(cv.lasso)
+```
+
+Here is a comparison of the models fitted thus far:
+
+```{r}
+metrics
+```
+
+Ridge and LASSO models yield similar results, indicating that additional shrinkage does not meaningfully improve classification of subscribers. We assume this is due to our modeling being majority indicator variables. This binary aspect of the indicator variable causes it's coefficient to be less affected by regularization techniques.
+
+```{r, out.width="45%", echo=FALSE}
+ggplot(roc_data, aes(x = fpr, y = tpr, color = Model)) +
+  geom_line(linewidth = 1) +
+  geom_abline(linetype = "dashed", color = "grey") +
+  labs(
+    title = "ROC Curve Comparison for Logistic Models",
+    x = "False Positive Rate (1 - Specificity)",
+    y = "True Positive Rate (Sensitivity)"
+  ) +
+  theme_minimal()
+```
+
+All three models exhibit a high overall Accuracy (around 0.89), which is expected given the significant class imbalance (Prevalence $\approx 0.11$). However, the critical metric, Sensitivity (the True Positive Rate for the minority class, 'yes'), is very low (around 0.17). This result, consistent across all three models, indicates that they struggle to correctly identify subscribers, leading to many False Negatives (FN). Conversely, the high Specificity (True Negative Rate $\approx 0.98$) means the models are excellent at identifying non-subscribers. The regularization methods (Ridge and LASSO) failed to provide any significant improvement in these metrics, suggesting that the primary limitation is one of high bias (due to insufficient flexibility) rather than high variance.
+\
 
 ### Models Considered:
 
-We evaluated five main models from the course:
+We evaluated five main models from the course: ***#only 3 models***
 
-- Logistic Regression — A linear classifier that estimates the log-odds of subscription. It is highly interpretable and provides coefficients that can be directly translated into marketing insights.
 
 - K-Nearest Neighbors (KNN) — A nonparametric method that makes predictions by finding the k most similar clients. It captures nonlinear relationships but can be sensitive to scaling and high-dimensional data. #TT
 
