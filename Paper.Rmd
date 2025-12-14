@@ -7,37 +7,41 @@ output: pdf_document
 
 ## Motivation # TT
 Bank Marketing dataset The Bank Marketing dataset was collected by a Portuguese banking institution during a series of direct telemarketing campaigns. These campaigns were done to encourage clients to subscribe to a long-term deposit product. Telemarketing is an expensive and time-consuming process; therefore, the bank would want to know in advance which customers are most likely to subscribe before any more investment takes place. Predictive modeling bears great value in this scenario, as it helps the bank focus resources on only those customers who depict a higher possibility of subscribing.
+
 In the subscription rate of this dataset, the problem is even more difficult as it is very low. Most individuals say "no," and only a small percentage decides to open a term deposit. If one class is rare, human judgment or simple rules fail to identify those clients who could actually be interested. A well-constructed model may present potential improvements in targeting accuracy, reduce the number of unsuccessful calls, and raise the return on investment. That is why it is necessary to research this dataset and look at which modeling approaches work best.
 
 **Description of dataset**  #TT 
 Each entry of the dataset represents one client contacted in one of the bank's telemarketing campaigns. This dataset contains 16 predictors carrying significant information about the client's background, financial situation, and interactions with previous campaigns. These variables fall into several key categories:
 Demographics include such factors as age, occupation, marital status, and education. These help describe who the clients are and often relate to financial behavior or economic stability.
 Financial indicators: Loan status, credit history, and average account balance. These variables describe the client's existing financial commitments and capacity, which may influence their willingness to invest in a long-term product like a term deposit.
+
 Marketing campaign features include the type of contact: cellular or telephone, month of contact, and day of contact, and duration of the call. These are operational decisions made by the marketing team and may influence a client's likelihood of subscribing. For example, longer call duration sometimes is indicative of higher client engagement.
 Campaign outcomes: Number of previous contacts and if the past interactions have resulted in a successful outcome. These variables highlight whether the client has been interested in the past or has been contacted many times without success.
+
 The data includes both numerical and categorical variables, and this can serve as a good example to compare the many different classification methods with respect to how each treats different data types: for instance, linear models require the conversion of categorical variables, whereas tree-based or distance-based methods would naturally handle those in different ways. This allows us to explore how each approach might respond to the same set of features.
 The response variable, y, tells whether the client has subscribed to the term deposit or not. Only a small fraction of the contacted clients actually subscribe, therefore this is a strongly imbalanced dataset. The class imbalance is because, in general, marketing datasets are imbalanced since the majority of customers do not respond positively when outreach is performed. This skewness biases models toward the "no" prediction since this prediction would naturally be correct for most of the cases. Therefore, careful handling of this bias will be critical to generate models capable of identifying the small minority of clients who are likely to subscribe-the group that the bank cares most about.
 
 
 **Problem Statement/Assumptions**  #TT
 It is now required to develop statistical models based on the available information in the dataset that will predict with accuracy whether a client will subscribe to a term deposit. This problem is of a binary classification nature, and our work focuses on comparing several models that differ in assumptions, flexibility, and interpretability. Understanding how such models perform is useful to a marketing team for making informed decisions about which clients to contact in future campaigns.
+
 We focused our attention on well-performing models that give insightful knowledge of which factors drive the choice of a client. In the banking industry, understanding why a model has yielded some prediction is crucial. This supports ethical marketing practices, helps managers explain decisions, and can be important for regulatory compliance. For instance, highly flexible models may perform very well but may not indicate which client characteristics are actually relevant. More interpretable models do not always have the strongest accuracy but can guide marketing strategies more directly.
+
 We make the following assumptions to keep the analysis focused and manageable:
 Independence of observations: We treat the observations as independent, even though multiple contacts with the same client may appear across different campaigns. This assumption makes the training and evaluation of the models easier, even if some repeated-measure structure in the data is ignored.
 No time-series modeling: variables such as campaign month or day are available within the dataset, which can be considered to hold temporal patterns. However, we do not model this data as a time series. This keeps the focus on cross-sectional relationships between client characteristics and subscription behavior.
 Use of class-relevant models: We restrict our approach to models presented in class because this enables us to contrast multiple concepts, including linear decision boundaries, distance-based approaches, and flexible tree-based structures. This renders the analysis suitable for a course project while still answering substantial questions regarding classification performance.
+
 Generalization from sample to population: We assume that this dataset is a good representation of the client population to which the bank will offer its services in forthcoming campaigns. If we couldn't assume this, our predictions wouldn't generalize properly to real-world decision-making.
 By selecting these assumptions, we are assured of a standard framework that will allow the comparison of different classification techniques on equal footing. The aim is not only to identify which model performs the best but also to understand how different modeling strategies behave when applied to imbalanced marketing data; this may provide practical insights into how a bank would structure its future campaigns and what features of clients are most relevant for predicting subscription behaviors.
 
 
-## Methodology 
-
 #### Data Wrangling and Cleaning:
+The analysis began by loading the Bank Marketing dataset and converting all categorical predictors into factor variables so they could be properly handled by the statistical modeling procedures in R. Several variables contained “unknown” values, which serve as placeholders rather than true missing observations. Multiple strategies for handling these values were considered, including treating them as missing and excluding the affected observations. Ultimately, “unknown” values were retained as their own category in order to preserve information and avoid altering the underlying class imbalance.
 
+An additional feature, previously_contacted, was engineered to address the special coding of the pdays variable, where a value of −1 indicates that a client was not previously contacted. This transformation allowed the model to distinguish between first-time and repeat contacts more clearly.
 
-We began by loading the dataset, converting categorical variables into factors, and identifying “unknown” levels used in place of missing data. We evaluated several approaches to handling these values—including keeping “unknown” as its own category and treating them as missing, but ultimately selected the method that preserved the most information without distorting class balance.
-
-A train/test split was created, and all models were trained using the same set of cleaned predictors for fair comparison.
+To evaluate model performance fairly, the dataset was partitioned into an 80% training set and a 20% test set using stratified sampling based on the response variable. This ensured that the original class imbalance was preserved in both subsets. All models were trained on the same cleaned training data and evaluated on the same test data, allowing for direct and unbiased comparison across modeling approaches.
 
 ### Models Considered:
 
@@ -48,36 +52,46 @@ We evaluated five main models from the course:
 - K-Nearest Neighbors (KNN) — A nonparametric method that makes predictions by finding the k most similar clients. It captures nonlinear relationships but can be sensitive to scaling and high-dimensional data. #TT
 
 K-Nearest Neighbors is a nonparametric classification method that predicts an outcome for a new observation by looking at the k most similar clients in the training dataset. Rather than estimating a set of coefficients or assuming any functional form between predictors and the response, KNN makes predictions based purely on proximity in predictor space. This makes the method particularly well-suited when the underlying relationship between predictors and subscription behavior is nonlinear or too complicated for a parametric model to capture.
+
 Because KNN relies on distance calculations, feature scaling is an important preprocessing step. Otherwise, predictors that are measured on a larger scale-e.g., account balance or call duration-would dominate the distance metric and distort which observations are considered "nearest." In our implementation, we standardized all numeric variables so that each feature was given equal weight in determining the similarity between any two customers. This preprocessing step is especially important for marketing datasets which often involve heterogeneous variables.
 A major modeling decision in KNN, which involves a choice, is the value of k. For small values of k, the classifier is highly flexible and closely follows the training data with a potential risk of overfitting noise. Larger values produce smoother, more stable decision boundaries; however, this has a potential risk of missing the important patterns. We used 5-fold cross-validation to identify the value of k that minimized the estimated test error, balancing the bias-variance trade-off.
+
 While KNN presents an intuitive method of finding clients with similar profiles, it has several limitations in this context. The performance may suffer for high-dimensional data, with points becoming further apart and distances becoming less informative-the "curse of dimensionality". Second, KNN is less interpretable than models like logistic regression, where the effect of every predictor can be expressed quantitatively. It does, however, provide a useful baseline when assessing the performance of alternative nonlinear classification methods for predicting term deposit subscriptions.
 
-- Boosting (e.g., AdaBoost or Gradient Boosting) — An ensemble method that sequentially builds weak learners to minimize classification error. Boosting is often superior in predictive accuracy but is less interpretable.
+Boosting was used as the most flexible modeling approach in this study to address the strong class imbalance and complex predictor relationships present in the Bank Marketing dataset. Unlike logistic regression and KNN, boosting does not rely on a fixed functional form and can naturally capture nonlinear effects and interactions among demographic, financial, and campaign-related variables.
+
+The boosting model was trained on the same 80% training set as the other models using a Bernoulli loss function appropriate for binary classification. To allow the model sufficient capacity to learn complex structure, the model was initially trained with 1,500 trees. Model complexity was controlled using a small learning rate and shallow tree depth to encourage gradual improvement rather than abrupt overfitting.
+The optimal number of trees was selected using out-of-bag (OOB) error estimation. This procedure identified approximately 1,100 trees as the point at which predictive performance was maximized. Beyond this value, additional trees did not lead to meaningful improvements, indicating that the model had effectively converged. Final predictions and evaluation metrics were therefore computed using 1,100 trees to balance flexibility and generalization.
+
+When evaluated on the test set, boosting achieved the strongest overall performance among all models considered. It produced the highest accuracy, sensitivity, and AUC, substantially improving the identification of the minority “yes” class compared to logistic regression and KNN. In particular, boosting correctly identified over 40% of subscribing clients while maintaining high specificity, demonstrating its ability to reduce false negatives without substantially increasing false positives. These results indicate that boosting is well suited for imbalanced marketing data where identifying potential subscribers is a primary objective.
 
 ### Model Training, Formulation, and Validation
+All models were trained and evaluated within a consistent validation framework to ensure fair comparison and reliable estimation of out-of-sample performance. An 80/20 stratified train–test split was used, and all modeling decisions, including feature selection and hyperparameter tuning, were made using only the training data. This prevented information leakage and ensured that the test set provided an honest evaluation of generalization performance.
 
-All models were trained using k-fold cross-validation to estimate out-of-sample performance. This approach reduces variance and ensures that results do not depend on a single train/test split.
+For the logistic regression models, feature selection was performed using backward stepwise selection based on AIC to obtain a parsimonious set of predictors. Residual diagnostics were used to assess model assumptions, leading to the inclusion of nonlinear terms where appropriate. Regularization techniques, including Ridge and LASSO regression, were applied to address multicollinearity and reduce variance. The regularization parameter was selected using 5-fold cross-validation.
 
-We also carried out:
-- Feature selection using stepwise regression and subset selection for logistic regression
-- Regularization techniques (ridge/lasso) when appropriate
-- Dimensionality reduction (e.g., PCA) if needed to improve KNN performance
-- Hyperparameter tuning for KNN (choice of k)
+K-Nearest Neighbors required additional preprocessing due to its reliance on distance-based calculations. All numeric predictors were standardized to ensure equal contribution to the distance metric. The number of neighbors, 
+k, was selected using 5-fold cross-validation by identifying the value that minimized classification error on the training folds.
 
-This section of the paper will include the formal model equations and the details of the validation procedure.
-
+Boosting was trained using a large number of trees to allow sufficient model flexibility, with the optimal number of trees selected using out-of-bag error estimation. This tuning procedure served a similar role to cross-validation by identifying the point at which additional complexity no longer improved performance.
+Across all models, final performance was assessed on the held-out test set using accuracy, sensitivity, and AUC. Because the dataset is highly imbalanced, particular emphasis was placed on sensitivity and AUC as measures of a model’s ability to identify the minority “yes” class.
 
 ## Results
 
-Once our models are trained, we will compare their performance using test error rate, confusion matrices, and metrics such as accuracy, recall, and AUC. Because the dataset is imbalanced, we expect recall and AUC to be especially important for evaluating how well each model identifies clients who subscribe.
+This study evaluated multiple statistical and machine learning models for predicting term deposit subscriptions using the Bank Marketing dataset. Due to the strong class imbalance, model performance was assessed using accuracy, sensitivity, and AUC rather than accuracy alone. Logistic regression and its regularized variants demonstrated strong overall discrimination and high AUC values, but they struggled to identify the minority class of subscribing clients. K-Nearest Neighbors performed less effectively, showing limited discriminatory power in this high-dimensional, imbalanced setting.
 
-We will also create ROC curves to compare models visually and use information criteria (AIC/BIC) for parametric models where appropriate. After summarizing these results, we will determine which model performs best overall and which provides the most useful insights for guiding future marketing decisions
+Boosting outperformed all other models, achieving the highest accuracy, sensitivity, and AUC on the test set. Its superior performance indicates that flexible ensemble methods are better suited for capturing complex, nonlinear relationships in marketing data. However, logistic regression remains valuable due to its interpretability and ability to provide actionable insights. Overall, the results highlight an important trade-off between predictive performance and interpretability when modeling imbalanced marketing data.
 
 ## Discussion
 
-Since we are still exploring the dataset and fitting our models, we have not yet determined which classification method will perform best. However, based on the structure of the Bank Marketing data and findings from similar studies, we expect that boosting is likely to give the best predictive accuracy, while logistic regression will likely be the most interpretable and actionable for managers.
+The results of this study highlight an important trade-off between predictive performance and interpretability when modeling imbalanced bank marketing data. Among all models evaluated, boosting achieved the strongest overall predictive performance, particularly in terms of sensitivity and AUC. This indicates that boosting is the most effective method for identifying clients who are likely to subscribe to a term deposit, which is the primary objective of the bank. By capturing complex nonlinear relationships and interactions among predictors, boosting substantially reduced the number of missed potential subscribers compared to simpler models.
 
-In the final version of this section, we will compare the models based on their test performance, interpretability, and robustness to class imbalance. We will also discuss any limitations of our approach and suggest future improvements, such as trying resampling methods or evaluating additional machine learning models.
+However, while boosting offers superior predictive accuracy, it lacks transparency. In contrast, regularized logistic regression provides more interpretable results that can be directly translated into business insights. Coefficient estimates from the logistic models reveal how specific client characteristics influence subscription probability. For example, higher account balances were associated with lower marginal increases in subscription probability at extreme values, housing loan status was negatively associated with subscription, and student job status showed a strong positive association. These interpretable effects allow marketing teams to better understand customer behavior and design targeted strategies, even if the model itself is not the most accurate.
+
+Interpretability is particularly important in the banking sector, where predictive decisions may be subject to regulatory oversight and ethical scrutiny. Models that can clearly justify why a client was targeted or excluded are easier to audit and defend. From this perspective, logistic regression remains a valuable tool despite its lower sensitivity. A practical strategy for the bank may involve using boosting as a primary screening model to identify high-potential clients, followed by logistic regression to provide explanations and support decision-making.
+Several limitations should be noted. The analysis did not incorporate time-aware modeling, even though campaign timing may influence client responses. Additionally, no resampling techniques were used to directly address class imbalance. Future work could explore methods such as SMOTE or cost-sensitive learning to further improve minority-class detection. Other extensions may include experimenting with alternative ensemble methods or adjusting decision thresholds to better align predictions with business costs.
+
+Overall, this study demonstrates that flexible ensemble models offer substantial gains in predictive performance for imbalanced marketing problems, while interpretable models remain essential for transparency and actionable insight. Balancing these two objectives is critical for effective and responsible deployment of predictive models in real-world banking applications.
 
 
 ## References
