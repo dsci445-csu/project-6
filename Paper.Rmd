@@ -1,8 +1,10 @@
 ---
 title: "DSCI 445 Final Report"
 subtitle: "Machine Learning Models on A Bank Marketing Dataset"
-author: "Sandra Afrifa, Tigist Kefelew , Mussa Hassen, Waddah Alaahtani"
+author: "Sandra Afrifa, Tigist Kefelew , Mussa Hassen, Waddah Alqahtani"
 output: pdf_document
+header-includes:
+  - \usepackage{float}
 ---
 
 ```{r, include=FALSE}
@@ -80,7 +82,100 @@ Exploratory analysis shows that the numeric predictors (balance, duration, pdays
 Also, analysis reveals substantial class imbalance, in the response variable, which motivates the use of appropriate modeling and evaluation for our classification problem.
 Visualizations of subscription rates by job education marital status contact type and previous outcome reveal variations in client responsiveness across different factors.
 
-*[STREAMLINE Plots and EDA summary HERE]*
+## Exploratory Data Analysis (EDA)
+
+### Data Characteristics and Class Imbalance
+
+Our exploratory analysis examined 45,211 client records from the Portuguese banking institution. Analysis of the target variable revealed severe class imbalance, with only 11.7% of clients subscribing to term deposits compared to 88.3% who declined (Figure 1). This imbalance represented a key challenge for predictive modeling.
+
+```{r fig1, echo=FALSE, fig.cap="Class imbalance in term deposit subscriptions. Only 11.7% of clients subscribed, presenting a significant modeling challenge.", fig.align='center', out.width='70%', fig.pos='H'}
+
+ggplot(bank_full, aes(x = y, fill = y)) +
+  geom_bar(color = "white", linewidth = 0.4) +
+  scale_fill_manual(
+    values = c("no" = "grey75", "yes" = "seagreen3")
+  ) +
+  labs(
+    x = "Subscribed?",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none",
+    panel.grid.major.x = element_blank()
+  )
+
+```
+
+
+### Demographic Patterns
+
+Demographic patterns emerged from the data: retired clients and students were most likely to subscribe, while blue-collar workers were least likely. Higher education levels correlated with increased subscription rates.
+
+```{r fig2, echo=FALSE, fig.cap="Distribution of job categories in the dataset. Administrative, blue-collar, and technician occupations are most common.", fig.align='center', out.width='70%', fig.pos='H'}
+      
+ggplot(bank_full, aes(x = job)) +
+  geom_bar(fill = "steelblue3") +
+  coord_flip() +
+  labs(
+    x = "Job",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank()
+  )
+
+```
+
+
+### Historical Patterns
+
+Analysis of previous campaign outcomes revealed powerful patterns: clients with previous successful subscriptions demonstrated approximately 65% likelihood of subscribing again, compared to only 15% among those with previous unsuccessful outcomes.
+
+```{r fig3, echo=FALSE, fig.cap="Previous campaign outcome influence. Clients with previous success show 65% subscription rates compared to 15% for previous failures.", fig.align='center', out.width='70%', fig.pos='H'}
+
+ggplot(bank_full, aes(x = poutcome, fill = y)) +
+  geom_bar(position = "fill", color = "white", linewidth = 0.3) +
+  scale_fill_manual(
+    values = c("no" = "grey75", "yes" = "seagreen3")
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Previous Outcome",
+    y = "Proportion Subscribed"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none"
+  )
+
+```
+
+### Campaign Dynamics and Diminishing Returns
+
+Campaign persistence analysis showed a clear downward trend in success rates as contact frequency increased, with substantial decline after five attempts and minimal success beyond thirty contacts.
+
+```{r fig4, echo=FALSE, fig.cap="Diminishing returns from repeated contacts. Success rates drop significantly after 5 contacts.", fig.align='center', out.width='70%', fig.pos='H'}
+
+bank_full %>%
+  group_by(campaign) %>%
+  summarise(success_rate = mean(y == "yes")) %>%
+  ggplot(aes(x = campaign, y = success_rate)) +
+  geom_line(color = "steelblue3", linewidth = 1.2) +
+  geom_point(color = "darkorange2", size = 2.8) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Number of Contacts",
+    y = "Success Rate"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.minor = element_blank()
+  )
+
+```
+
 
 Data preprocessing involved converting categorical variables to factors and adding derived variables such as pdays to account for clients not previously contacted. Converting the categorical variables (initilay character type) to factors creates an indicator for each class in the variable (i.e. if job has 20 factors, 20 indicator variables will be considered in the model fit). As for the previously contaced variable (days since previously contacted), customers who haven't been prreviously contacted will recieve a value of -1. This can cause improper modeling of customers, since the variable now takes on the value of negative numbers. Instead we set -1 to zeros and created a new variable to indicate customers that have not been previously coontacted before. These steps ensure that the dataset is suitable for statistical learning models and enable accurate assessment of predictive performance. \
 
