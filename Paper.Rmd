@@ -47,13 +47,13 @@ test_data  <- bank_full[-train_index, ]
 ```
 
 
-## Motivation
+# Motivation
 
-Bank telemarketing campaigns are a major channel through which financial institutions promote term deposit products. Thsee marketing campaigns come with a cost and are often inefficient due to low client response rates. 
+Bank telemarketing campaigns are a major channel through which financial institutions promote term deposit products. These marketing campaigns come with a cost and are often inefficient due to low client response rates. 
 Prior work by Moro et al. (2014) discover that client characteristics and campaign related factors strongly influence subscription outcomes. Motivating a data-driven approach to improve targeting and decision-making in bank marketing. 
 In their approach a Portuguese retail bank was studied using campaign data collected between 2008 and 2013. 
     
-Our dataset was a publicily available dataset, thus had less variables for privacy concerns of the bank customers.
+Our dataset was a publicly available dataset, thus had less variables for privacy concerns of the bank customers.
 The Bank Marketing dataset was collected by a Portuguese banking institution during a series of direct telemarketing campaigns. These campaigns were done to encourage clients to subscribe to a long-term deposit product. Telemarketing is an expensive and time-consuming process; therefore, the bank would want to know in advance which customers are most likely to subscribe before any more investment takes place.
 The dataset consists of sixteen variables describing demographic, financial and campaign related variables that enlist individual clients contacted during direct marketing efforts. A list of the 16 variable found below...
 
@@ -179,23 +179,23 @@ bank_full %>%
 
 Data preprocessing involved converting categorical variables to factors and adding derived variables such as pdays to account for clients not previously contacted. Converting the categorical variables (initilay character type) to factors creates an indicator for each class in the variable (i.e. if job has 20 factors, 20 indicator variables will be considered in the model fit). As for the previously contaced variable (days since previously contacted), customers who haven't been prreviously contacted will recieve a value of -1. This can cause improper modeling of customers, since the variable now takes on the value of negative numbers. Instead we set -1 to zeros and created a new variable to indicate customers that have not been previously coontacted before. These steps ensure that the dataset is suitable for statistical learning models and enable accurate assessment of predictive performance. \
 
-### Problem Statement     
+## Problem Statement     
 This study is motivated by the availability of bank marketing datasets that enable comparison of machine learning methods for predicting term deposit subscription behavior.
 
 The specification of the problem begins with the recognition that we are addressing a binary classification task where the goal is to predict whether a client will subscribe to a term deposit based on demographic financial and campaign features. According to the framework presented in Introduction to Statistical Learning (ISLR), the fundamental goal is to estimate the unknown function, f(x) that relates the predictors, X to the response, Y. Some models are highly flexible and can capture complex non-linear relationships between predictors and the response. In most Cases these models achieve higher predictive accuracy. However, these flexible models often suffer from lower interpretability, making it difficult to understand the influence of individual features. Simpler models such as logistic regression are less flexible but provide coefficients that can be directly interpreted in terms of odds ratios, offering insight into feature importance. 
 
 Chapter 5 of Introduction to Statistical Learning emphasizes the importance of obtaining an unbiased estimate of a model’s test error to assess its predictive performance on unseen data. Test error quantifies how well a model generalizes beyond the data used for training, which is critical for selecting among competing models. The chapter presents several methods for estimating test error, including the simple training/test split, K-fold cross validation, and the leave-one-out cross validation (LOOCV) approach. Each method balances bias and variance differently, with cross validation generally providing a lower-variance estimate compared to a single split. These techniques are essential for model selection, tuning hyperparameters, and comparing the expected performance of alternative models. For the Bank Marketing dataset, estimating test error accurately is particularly important due to the class imbalance and the presence of both categorical and numeric predictors, which can influence model generalization.
 
-In the following chpater of Introduction to Statistical Learning focuses on model selection and regularization techniques to improve predictive performance and reduce overfitting. It introduces methods such as subset selection, shrinkage (Ridge and LASSO regression), and dimension reduction to assess and enhance model accuracy while controlling variance. These approaches allow practitioners to identify parsimonious models that generalize well to new data, providing complementary strategies to traditional test error estimation. We apply these concepts to the models we fit on the bank data, to reduce overfitting and ultimately improve the generalization of our models to new clients. \
+In the following chapter of Introduction to Statistical Learning focuses on model selection and regularization techniques to improve predictive performance and reduce overfitting. It introduces methods such as subset selection, shrinkage (Ridge and LASSO regression), and dimension reduction to assess and enhance model accuracy while controlling variance. These approaches allow practitioners to identify parsimonious models that generalize well to new data, providing complementary strategies to traditional test error estimation. We apply these concepts to the models we fit on the bank data, to reduce overfitting and ultimately improve the generalization of our models to new clients. \
 
-We start with a logistic regression (described in methodology section), then build up adjustments and regularizations to the logestic regression to make our baseline. We then move to another interpretable model: KNN. This model is considered transperent in a unique, due to it's neighboring factor.
-Finally we fit a Boosting model. This state-of-the-art model is not considered interpretable. Although, there are methods used to extract the contributing variables in such models. We included this model is used to gage how much accucracy we are sacrificing for interpretability. 
+We start with a logistic regression (described in methodology section), then build up adjustments and regularization to the logestic regression to make our baseline. We then move to another interpretable model: KNN. This model is considered transparent in a unique, due to it's neighboring factor.
+Finally we fit a Boosting model. This state-of-the-art model is not considered interpretable. Although, there are methods used to extract the contributing variables in such models. We included this model is used to gage how much accuracy we are sacrificing for interpretability. 
 
-The authors employed time ordered data splitting rolling window evaluation. For feature enrichment, they implimented a semi-automatic approach including external intuitive knowledge from domain experts (bank manager) to optimize features. They compared Logistic regression with Decission trees, SVMs, and Neural networks; all complex 'black-box' models. While Moro et al. prioritized maximizing classification performance, our approach also examines model simplicity, automatic feature selection, and diagnostic checks for appropriate classifications (from confusion matrices).
+The authors in (Moro et al.) employed time ordered data splitting rolling window evaluation. For feature enrichment, they implemented a semi-automatic approach including external intuitive knowledge from domain experts (bank manager) to optimize features. They compared Logistic regression with Decision trees, SVMs, and Neural networks; all complex 'black-box' models. While (Moro et al.) prioritized maximizing classification performance, our approach also examines model simplicity, automatic feature selection, and diagnostic checks for appropriate classifications (from confusion matrices).
 
 
-## Methodology
-For each of our models we implement a k-fold CV approach, with k=5 training/test split to maintain the distribution of the response variable across the sets. Our models do not apply time-series modeling, since our data does not include sequintial variables. Although variables such as campaign month or day are available within the dataset, which can be considered to hold temporal patterns, we do not model this data as a time series. This keeps the focus on cross-sectional relationships between client characteristics and subscription behavior.
+# Methodology
+For each of our models we implement a k-fold CV approach, with k=5 training/test split to maintain the distribution of the response variable across the sets. Our models do not apply time-series modeling, since our data does not include sequential variables. Although variables such as campaign month or day are available within the dataset, which can be considered to hold temporal patterns, we do not model this data as a time series. This keeps the focus on cross-sectional relationships between client characteristics and subscription behavior. An 80/20 random train–test split was used, and all modeling decisions, including feature selection and hyper-parameter tuning, were made using only the training data. This prevented information leakage and ensured that the test set provided an honest evaluation of generalization performance.
 
 1. **Logistic regression**
 
@@ -335,6 +335,15 @@ Logistic regression is used to model the probability of a binary outcome as a fu
 Formula: $$f(x) = P(Y=1 \mid \mathbf{x}) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 x_1 + \dots + \beta_k x_k)}}$$  
 Coefficients are estimated using the maximum likelihood method, which finds the parameter values that maximize the likelihood of observing the training data (ISLR). 
 
+### Interpretability
+To understand the meaning of the coefficients, we can transform the formula into the log-odds (logit) form:
+$$ \log\left(\frac{P(Y=1 \mid \mathbf{x})}{1 - P(Y=1 \mid \mathbf{x})}\right) = \beta_0 + \beta_1 x_1 + \dots + \beta_k x_k$$
+Consider a single coefficient, say $\beta_{balance}$, which relates to a client's average bank account balance. If the estimated coefficient for balance is $\beta_{balance} = 0.001$, this means that a one-unit increase in the client's balance is associated with a change of 0.001 in the log-odds of subscribing to a term deposit, assuming all other variables remain constant. This change in log-odds translates to a multiplicative change of $e^{0.001} \approx 1.001$ in the odds. Therefore, for every unit increase in balance, the odds of subscription increase by a factor of 1.001. This shows a clear relationship between the coefficient and the target variable.
+
+Without loss of generality, we can generalize this interpretation and estimation process to logistic regression models with multiple variables and their variations, such as incorporating Lasso regularization (for variable selection and complexity control) or applying polynomial transformations to the predictor variables (to capture non-linear relationships).
+
+### Model fit
+
 Feature selection is performed using backward stepwise selection to identify a parsimonious subset of predictors that minimizes estimated test error as measured by AIC. Variables such as duration and previous marketing outcomes remain in the model due to their strong predictive power, whereas less informative variables are excluded to reduce variance. Categorical predictors are converted to factors, and a new binary variable previously_contacted is created to handle clients with no prior campaign contact. This preprocessing ensures that the data is suitable for statistical modeling and facilitates accurate interpretation of model coefficients. We resulted 12 features:
 
 ```{r}
@@ -355,14 +364,18 @@ p1
 p2
 ```
 
-```{r}
-tran.coef
+```{r, echo=FALSE}
+full_coefs <- summary(glm.tran)$coefficients
+ballance_coefs <- c("poly(balance, 4)1", "poly(balance, 4)2", "poly(balance, 4)3", "poly(balance, 4)4")
+subset_coefs <- full_coefs[ballance_coefs, c(1, 4)]
+
+print(subset_coefs)
 ```
 
 Although this polynomial transformation didn't provide desired metrics in expense of the nonlinear effect. From the deviance residual plots we can observe there weren't significant deviance from a normal residual line. We will not include this model in our comparison.
 
 
-Regularization techniques such as Ridge ($\ell_2$ penalty) and LASSO ($\ell_1$ penalty) are employed to reduce variance and perform feature selection, particularly in the presence of correlated predictors. LASSO (Least Absolute Shrinkage and Selection Operator) regression uses an $\ell_1$ penalty ($\alpha=1$). A key property of the LASSO is that it forces the coefficients of some variables to be exactly zero, thereby performing automatic feature selection (Chapter 6). The LASSO plot similarly uses cross-validation to select the optimal $\lambda_{\min}$, `r round(lambda.min.lasso, 5)`. Unlike Ridge, the LASSO is expected to yield a more parsimonious model by excluding irrelevant predictors entirely. 
+Regularization techniques such as Ridge ($\ell_2$ penalty) and LASSO ($\ell_1$ penalty) are employed to reduce variance and perform feature selection, particularly in the presence of correlated predictors. LASSO (Least Absolute Shrinkage and Selection Operator) regression uses an $\ell_1$ penalty ($\alpha=1$). A key property of the LASSO is that it forces the coefficients of some variables to be exactly zero, thereby performing automatic feature selection (ISLR Chapter 6). The LASSO plot similarly uses cross-validation to select the optimal $\lambda_{\min}$, `r round(lambda.min.lasso, 5)`. Unlike Ridge, the LASSO is expected to yield a more parsimonious model by excluding irrelevant predictors entirely. 
 
 ```{r, out.width="45%", echo=FALSE}
 plot(cv.ridge)
@@ -394,8 +407,10 @@ All three models exhibit a high overall Accuracy (around 0.89), which is expecte
 
 ### Models Considered:
 
-We evaluated five main models from the course: ***#only 3 models***
+We evaluated five main models from the course: 
 
+
+2. **K-Nearest Neighbors (KNN)**
 
 - K-Nearest Neighbors (KNN) — A nonparametric method that makes predictions by finding the k most similar clients. It captures nonlinear relationships but can be sensitive to scaling and high-dimensional data. #TT
 
@@ -406,6 +421,9 @@ A major modeling decision in KNN, which involves a choice, is the value of k. Fo
 
 While KNN presents an intuitive method of finding clients with similar profiles, it has several limitations in this context. The performance may suffer for high-dimensional data, with points becoming further apart and distances becoming less informative-the "curse of dimensionality". Second, KNN is less interpretable than models like logistic regression, where the effect of every predictor can be expressed quantitatively. It does, however, provide a useful baseline when assessing the performance of alternative nonlinear classification methods for predicting term deposit subscriptions.
 
+
+3. **Boosting**
+
 Boosting was used as the most flexible modeling approach in this study to address the strong class imbalance and complex predictor relationships present in the Bank Marketing dataset. Unlike logistic regression and KNN, boosting does not rely on a fixed functional form and can naturally capture nonlinear effects and interactions among demographic, financial, and campaign-related variables.
 
 The boosting model was trained on the same 80% training set as the other models using a Bernoulli loss function appropriate for binary classification. To allow the model sufficient capacity to learn complex structure, the model was initially trained with 1,500 trees. Model complexity was controlled using a small learning rate and shallow tree depth to encourage gradual improvement rather than abrupt overfitting.
@@ -414,9 +432,6 @@ The optimal number of trees was selected using out-of-bag (OOB) error estimation
 When evaluated on the test set, boosting achieved the strongest overall performance among all models considered. It produced the highest accuracy, sensitivity, and AUC, substantially improving the identification of the minority “yes” class compared to logistic regression and KNN. In particular, boosting correctly identified over 40% of subscribing clients while maintaining high specificity, demonstrating its ability to reduce false negatives without substantially increasing false positives. These results indicate that boosting is well suited for imbalanced marketing data where identifying potential subscribers is a primary objective.
 
 ### Model Training, Formulation, and Validation
-All models were trained and evaluated within a consistent validation framework to ensure fair comparison and reliable estimation of out-of-sample performance. An 80/20 stratified train–test split was used, and all modeling decisions, including feature selection and hyperparameter tuning, were made using only the training data. This prevented information leakage and ensured that the test set provided an honest evaluation of generalization performance.
-
-For the logistic regression models, feature selection was performed using backward stepwise selection based on AIC to obtain a parsimonious set of predictors. Residual diagnostics were used to assess model assumptions, leading to the inclusion of nonlinear terms where appropriate. Regularization techniques, including Ridge and LASSO regression, were applied to address multicollinearity and reduce variance. The regularization parameter was selected using 5-fold cross-validation.
 
 K-Nearest Neighbors required additional preprocessing due to its reliance on distance-based calculations. All numeric predictors were standardized to ensure equal contribution to the distance metric. The number of neighbors, 
 k, was selected using 5-fold cross-validation by identifying the value that minimized classification error on the training folds.
@@ -424,13 +439,13 @@ k, was selected using 5-fold cross-validation by identifying the value that mini
 Boosting was trained using a large number of trees to allow sufficient model flexibility, with the optimal number of trees selected using out-of-bag error estimation. This tuning procedure served a similar role to cross-validation by identifying the point at which additional complexity no longer improved performance.
 Across all models, final performance was assessed on the held-out test set using accuracy, sensitivity, and AUC. Because the dataset is highly imbalanced, particular emphasis was placed on sensitivity and AUC as measures of a model’s ability to identify the minority “yes” class.
 
-## Results
+# Results
 
 This study evaluated multiple statistical and machine learning models for predicting term deposit subscriptions using the Bank Marketing dataset. Due to the strong class imbalance, model performance was assessed using accuracy, sensitivity, and AUC rather than accuracy alone. Logistic regression and its regularized variants demonstrated strong overall discrimination and high AUC values, but they struggled to identify the minority class of subscribing clients. K-Nearest Neighbors performed less effectively, showing limited discriminatory power in this high-dimensional, imbalanced setting.
 
 Boosting outperformed all other models, achieving the highest accuracy, sensitivity, and AUC on the test set. Its superior performance indicates that flexible ensemble methods are better suited for capturing complex, nonlinear relationships in marketing data. However, logistic regression remains valuable due to its interpretability and ability to provide actionable insights. Overall, the results highlight an important trade-off between predictive performance and interpretability when modeling imbalanced marketing data.
 
-## Discussion
+# Discussion
 
 The results of this study highlight an important trade-off between predictive performance and interpretability when modeling imbalanced bank marketing data. Among all models evaluated, boosting achieved the strongest overall predictive performance, particularly in terms of sensitivity and AUC. This indicates that boosting is the most effective method for identifying clients who are likely to subscribe to a term deposit, which is the primary objective of the bank. By capturing complex nonlinear relationships and interactions among predictors, boosting substantially reduced the number of missed potential subscribers compared to simpler models.
 
@@ -446,3 +461,7 @@ Overall, this study demonstrates that flexible ensemble models offer substantial
 
 Dua, D., & Graff, C. (2019). UCI Machine Learning Repository: Bank Marketing Dataset. 
 https://archive.ics.uci.edu/dataset/222/bank+marketing
+
+James, Gareth, et al. An Introduction to Statistical Learning : With Applications in R. Springer, 2013.
+
+Moro, Sérgio, et al. A Data-Driven Approach to Predict the Success of Bank Telemarketing. Decision Support Systems, vol. 62, June 2014, pp. 22–31.
