@@ -7,6 +7,13 @@ header-includes:
   - \usepackage{float}
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(readr)
+library(tidyverse)
+```
+
+
 ```{r, include=FALSE}
 library(readr)
 library(tidyverse)
@@ -412,7 +419,7 @@ We evaluated five main models from the course:
 
 2. **K-Nearest Neighbors (KNN)**
 
-- K-Nearest Neighbors (KNN) — A nonparametric method that makes predictions by finding the k most similar clients. It captures nonlinear relationships but can be sensitive to scaling and high-dimensional data. #TT
+- K-Nearest Neighbors (KNN) — A nonparametric method that makes predictions by finding the k most similar clients. It captures nonlinear relationships but can be sensitive to scaling and high-dimensional data.
 
 K-Nearest Neighbors is a nonparametric classification method that predicts an outcome for a new observation by looking at the k most similar clients in the training dataset. Rather than estimating a set of coefficients or assuming any functional form between predictors and the response, KNN makes predictions based purely on proximity in predictor space. This makes the method particularly well-suited when the underlying relationship between predictors and subscription behavior is nonlinear or too complicated for a parametric model to capture.
 
@@ -421,15 +428,146 @@ A major modeling decision in KNN, which involves a choice, is the value of k. Fo
 
 While KNN presents an intuitive method of finding clients with similar profiles, it has several limitations in this context. The performance may suffer for high-dimensional data, with points becoming further apart and distances becoming less informative-the "curse of dimensionality". Second, KNN is less interpretable than models like logistic regression, where the effect of every predictor can be expressed quantitatively. It does, however, provide a useful baseline when assessing the performance of alternative nonlinear classification methods for predicting term deposit subscriptions.
 
+```{r}
+# KNN Model
+library(class)
+
+# Remove any extra columns that might have been added
+train_data_clean <- train_data %>% 
+  dplyr::select(-any_of(c("residuals", "y_num")))
+test_data_clean <- test_data %>% 
+  dplyr::select(-any_of(c("residuals", "y_num")))
+
+# Prepare data for KNN (standardize numeric variables)
+numeric_vars <- c("age", "balance", "day", "duration", "campaign", "pdays", "previous")
+
+# Create model matrices from combined data to ensure same dimensions
+full_data_temp <- rbind(
+  train_data_clean %>% mutate(set = "train"),
+  test_data_clean %>% mutate(set = "test")
+)
+
+# Standardize numeric variables
+full_data_temp[numeric_vars] <- scale(full_data_temp[numeric_vars])
+
+# Create model matrix for all data at once
+X_full_knn <- model.matrix(y ~ . - set - 1, data = full_data_temp)
+
+# Split back into train and test
+X_train_knn <- X_full_knn[full_data_temp$set == "train", ]
+X_test_knn <- X_full_knn[full_data_temp$set == "test", ]
+
+# Find optimal k using cross-validation
+set.seed(445)
+k_values <- c(3, 5, 7, 9, 11, 15, 20, 25, 30)
+
+# Use caret for easier CV with KNN
+ctrl_knn <- trainControl(method = "cv", number = 5)
+
+set.seed(445)
+knn_cv <- train(
+  y ~ .,
+  data = train_data_clean,
+  method = "knn",
+  trControl = ctrl_knn,
+  tuneGrid = data.frame(k = k_values)
+)
+
+best_k <- knn_cv$bestTune$k
+
+# Fit final KNN model
+knn_pred <- knn(
+  train = X_train_knn,
+  test = X_test_knn,
+  cl = train_data_clean$y,
+  k = best_k,
+  prob = TRUE
+)
+
+# Get probabilities
+knn_prob <- attr(knn_pred, "prob")
+knn_prob <- ifelse(knn_pred == "yes", knn_prob, 1 - knn_prob)
+
+# Confusion matrix
+cm_knn <- confusionMatrix(knn_pred, test_data_clean$y, positive = "yes")
+
+# ROC curve
+roc_knn <- roc(test_data_clean$y, knn_prob)
+```
+
+```{r, out.width="45%",}
+# Confusion Matrix
+cm_knn
+
+# Best k value
+cat("\nOptimal number of neighbors (k):", best_k, "\n")
+cat("Cross-validation accuracy:", round(max(knn_cv$results$Accuracy), 4), "\n")
+```
+
+```{r, out.width="45%",}
+# CV results plot
+plot(knn_cv, main = "KNN Cross-Validation Performance")
+```
+
+```{r, out.width="45%",}
+# ROC curve
+plot(roc_knn, col = "steelblue", lwd = 2)
+abline(a = 0, b = 1, lty = 2, col = "gray")
+text(0.6, 0.3, paste("AUC =", round(auc(roc_knn), 4)), cex = 1.2)
+```
 
 3. **Boosting**
 
 Boosting was used as the most flexible modeling approach in this study to address the strong class imbalance and complex predictor relationships present in the Bank Marketing dataset. Unlike logistic regression and KNN, boosting does not rely on a fixed functional form and can naturally capture nonlinear effects and interactions among demographic, financial, and campaign-related variables.
 
-The boosting model was trained on the same 80% training set as the other models using a Bernoulli loss function appropriate for binary classification. To allow the model sufficient capacity to learn complex structure, the model was initially trained with 1,500 trees. Model complexity was controlled using a small learning rate and shallow tree depth to encourage gradual improvement rather than abrupt overfitting.
-The optimal number of trees was selected using out-of-bag (OOB) error estimation. This procedure identified approximately 1,100 trees as the point at which predictive performance was maximized. Beyond this value, additional trees did not lead to meaningful improvements, indicating that the model had effectively converged. Final predictions and evaluation metrics were therefore computed using 1,100 trees to balance flexibility and generalization.
+We implemented gradient boosting using a Bernoulli loss function for binary classification. The model was trained on the same 80% training set as the other methods. To encourage gradual learning and prevent overfitting, we used a small learning rate (shrinkage = 0.01) and shallow trees (interaction depth = 3). The model was initially trained with 1,500 trees to allow sufficient flexibility.
 
-When evaluated on the test set, boosting achieved the strongest overall performance among all models considered. It produced the highest accuracy, sensitivity, and AUC, substantially improving the identification of the minority “yes” class compared to logistic regression and KNN. In particular, boosting correctly identified over 40% of subscribing clients while maintaining high specificity, demonstrating its ability to reduce false negatives without substantially increasing false positives. These results indicate that boosting is well suited for imbalanced marketing data where identifying potential subscribers is a primary objective.
+The optimal number of trees was selected using out-of-bag (OOB) error estimation, which serves a similar role to cross-validation in ensemble methods. The OOB procedure identified the point at which additional trees no longer meaningfully improved predictive performance. Final predictions were computed using the optimal number of trees selected by this procedure.
+
+```{r, out.width="45%", boosting-fit, echo=FALSE, fig.cap="Out-of-bag error used to select the optimal number of boosting trees.", fig.pos='H'}
+library(gbm)
+
+train_data <- train_data %>% dplyr::select(-any_of("residuals"))
+test_data  <- test_data  %>% dplyr::select(-any_of("residuals"))
+
+train_data$y_num <- ifelse(train_data$y == "yes", 1, 0)
+test_data$y_num  <- ifelse(test_data$y == "yes", 1, 0)
+
+set.seed(445)
+boost_model <- gbm(
+  y_num ~ . - y,
+  data = train_data,
+  distribution = "bernoulli",
+  n.trees = 1500,
+  shrinkage = 0.01,
+  interaction.depth = 3,
+  bag.fraction = 0.5,
+  verbose = FALSE
+)
+
+best_trees <- gbm.perf(boost_model, method = "OOB", plot.it = TRUE)
+
+```
+
+
+```{r, out.width="45%",}
+boost_prob <- predict(boost_model, test_data, n.trees = best_trees, type = "response")
+boost_pred <- factor(ifelse(boost_prob > 0.5, "yes", "no"), levels = c("no","yes"))
+
+cm_boost <- confusionMatrix(boost_pred, test_data$y, positive = "yes")
+cm_boost
+
+```
+
+
+```{r, out.width="45%",}
+roc_boost <- roc(test_data$y, boost_prob)
+plot(roc_boost, col = "darkgreen", lwd = 2)
+abline(a = 0, b = 1, lty = 2)
+
+```
+
+When evaluated on the test set, boosting achieved the strongest overall performance among all models considered. It produced the highest accuracy (0.905), sensitivity (0.412), and AUC (0.927). In particular, boosting correctly identified over 40% of subscribing clients while maintaining high specificity. This represents a substantial improvement over logistic regression, KNN, and GAM, all of which struggled to identify the minority “yes” class. These results highlight the advantage of flexible ensemble methods in reducing bias and capturing complex nonlinear patterns in imbalanced marketing data.
 
 ### Model Training, Formulation, and Validation
 
@@ -441,9 +579,95 @@ Across all models, final performance was assessed on the held-out test set using
 
 # Results
 
-This study evaluated multiple statistical and machine learning models for predicting term deposit subscriptions using the Bank Marketing dataset. Due to the strong class imbalance, model performance was assessed using accuracy, sensitivity, and AUC rather than accuracy alone. Logistic regression and its regularized variants demonstrated strong overall discrimination and high AUC values, but they struggled to identify the minority class of subscribing clients. K-Nearest Neighbors performed less effectively, showing limited discriminatory power in this high-dimensional, imbalanced setting.
+Model performance was evaluated on a held-out test set using accuracy, sensitivity, and AUC. Because the dataset is highly imbalanced, particular emphasis was placed on sensitivity and AUC as measures of a model’s ability to identify the minority “yes” class.
 
-Boosting outperformed all other models, achieving the highest accuracy, sensitivity, and AUC on the test set. Its superior performance indicates that flexible ensemble methods are better suited for capturing complex, nonlinear relationships in marketing data. However, logistic regression remains valuable due to its interpretability and ability to provide actionable insights. Overall, the results highlight an important trade-off between predictive performance and interpretability when modeling imbalanced marketing data.
+```{r}
+# Create final results comparison table
+final_results <- data.frame(
+  Model = c("Baseline Logit", "Ridge Logit", "LASSO Logit", "KNN", "Boosting"),
+  Accuracy = c(
+    cm_baseline$overall['Accuracy'],
+    cm_ridge$overall['Accuracy'],
+    cm_lasso$overall['Accuracy'],
+    cm_knn$overall['Accuracy'],  # You'll need to create this
+    cm_boost$overall['Accuracy']
+  ),
+  Sensitivity = c(
+    cm_baseline$byClass['Sensitivity'],
+    cm_ridge$byClass['Sensitivity'],
+    cm_lasso$byClass['Sensitivity'],
+    cm_knn$byClass['Sensitivity'],  # You'll need to create this
+    cm_boost$byClass['Sensitivity']
+  ),
+  AUC = c(
+    auc(roc_baseline),
+    auc(roc_ridge),
+    auc(roc_lasso),
+    auc(roc_knn),  # You'll need to create this
+    auc(roc_boost)
+  )
+)
+
+# Round for better display
+final_results[, 2:4] <- round(final_results[, 2:4], 4)
+```
+
+
+```{r}
+final_results
+```
+
+
+Boosting outperformed all other models across all key performance metrics. It achieved the highest accuracy (0.9047), sensitivity (0.4115), and AUC (0.9266), indicating superior ability to identify clients likely to subscribe to a term deposit. This improvement in sensitivity is particularly important in the bank marketing context, where failing to identify potential subscribers represents a missed business opportunity.
+
+The logistic regression models (baseline, Ridge, and LASSO) achieved similar accuracy levels (approximately 0.898–0.900) and strong AUC values (around 0.907), indicating good overall discrimination. However, their sensitivity remained relatively low, suggesting that these models frequently misclassified subscribing clients as non-subscribers. Regularization did not substantially improve performance, indicating that model bias rather than variance was the primary limitation.
+
+KNN performed the weakest among all models, with the lowest AUC (0.617), reflecting poor discriminatory power in this high-dimensional setting. GAM demonstrated improved AUC (0.854) but still failed to substantially improve sensitivity, indicating limited gains from smooth nonlinear terms alone.
+
+```{r, out.width="45%",}
+# Combine all ROC data for plotting
+roc_all <- data.frame(
+  fpr = c(
+    1 - roc_baseline$specificities,
+    1 - roc_ridge$specificities,
+    1 - roc_lasso$specificities,
+    1 - roc_knn$specificities,
+    1 - roc_boost$specificities
+  ),
+  tpr = c(
+    roc_baseline$sensitivities,
+    roc_ridge$sensitivities,
+    roc_lasso$sensitivities,
+    roc_knn$sensitivities,
+    roc_boost$sensitivities
+  ),
+  Model = factor(
+    c(
+      rep("Baseline Logit", length(roc_baseline$specificities)),
+      rep("Ridge Logit", length(roc_ridge$specificities)),
+      rep("LASSO Logit", length(roc_lasso$specificities)),
+      rep("KNN", length(roc_knn$specificities)),
+      rep("Boosting", length(roc_boost$specificities))
+    ),
+    levels = c("Baseline Logit", "Ridge Logit", "LASSO Logit", "KNN", "Boosting")
+  )
+)
+```
+
+```{r, out.width="45%",}
+ggplot(roc_all, aes(x = fpr, y = tpr, color = Model)) +
+geom_line(linewidth = 1) +
+geom_abline(linetype = "dashed") +
+labs(
+x = "False Positive Rate",
+y = "True Positive Rate"
+) +
+theme_minimal()
+
+```
+
+The ROC curves reinforce the numerical results. Boosting dominates across most thresholds, confirming its superior ranking ability. Logistic regression models cluster closely together, while KNN performs only slightly better than random classification.
+
 
 # Discussion
 
