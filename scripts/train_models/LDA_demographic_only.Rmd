@@ -2,9 +2,41 @@
 title: "Demographic Only LDA"
 ---
 
-
+```{r}
+data = read.csv("datasets\\train\\train_demographic.csv")
+test_data = read.csv("datasets\\test\\test_demographic.csv")
+head(data)
+data$main.disorder <- as.factor(data$main.disorder)
+test_data$main.disorder <- as.factor(test_data$main.disorder)
+```
 ```{r}
 library(tidymodels)
+library(discrim)
+library(yardstick)
 
+
+lda_spec <- discrim_linear(engine = "MASS") |>
+  set_engine("MASS", prior = equal_priors)
+
+lda_fit <- lda_spec |>
+    fit( main.disorder ~ sex+age+education+IQ, data = data)
+
+lda_fit$fit
 ```
 
+```{r}
+
+test_results <- lda_fit |>
+  augment(new_data = test_data)
+
+test_results |>
+  conf_mat(truth = main.disorder, estimate = .pred_class)
+
+test_results |>
+  metrics(truth = main.disorder, estimate = .pred_class)
+
+class_metrics <- metric_set(accuracy, sens, spec)
+
+test_results |>
+  class_metrics(truth = main.disorder, estimate = .pred_class)
+```

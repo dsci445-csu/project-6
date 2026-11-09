@@ -1,0 +1,48 @@
+---
+title: "Demographic Only KNN"
+---
+
+```{r}
+data = read.csv("datasets\\train\\train_demographic.csv")
+test_data = read.csv("datasets\\test\\test_demographic.csv")
+head(data)
+data$main.disorder <- as.factor(data$main.disorder)
+test_data$main.disorder <- factor(test_data$main.disorder, levels = levels(data$main.disorder))
+
+for (column in c("age", "education", "IQ")) {
+  training_median <- median(data[[column]], na.rm = TRUE)
+  data[[column]][is.na(data[[column]])] <- training_median
+  test_data[[column]][is.na(test_data[[column]])] <- training_median
+}
+```
+```{r}
+library(tidymodels)
+library(yardstick)
+# install.packages("kknn")
+
+knn_spec <- nearest_neighbor(neighbors = 5) |>
+  set_engine("kknn") |>
+  set_mode("classification")
+
+knn_fit <- knn_spec |>
+    fit( main.disorder ~ sex+age+education+IQ, data = data)
+
+knn_fit$fit
+```
+
+```{r}
+
+test_results <- knn_fit |>
+  augment(new_data = test_data)
+
+test_results |>
+  conf_mat(truth = main.disorder, estimate = .pred_class)
+
+test_results |>
+  metrics(truth = main.disorder, estimate = .pred_class)
+
+class_metrics <- metric_set(accuracy, sens, spec)
+
+test_results |>
+  class_metrics(truth = main.disorder, estimate = .pred_class)
+```
