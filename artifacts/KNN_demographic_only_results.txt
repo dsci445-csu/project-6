@@ -1,0 +1,16 @@
+KNN demographic-only
+
+Confusion matrix
+
+Predicted \ Actual | Addict | Anxiety | Healthy | Mood | OCD | Schiz. | Trauma
+-------------------+--------+---------+---------+------+-----+--------+-------
+Addict             |      8 |       5 |       3 |   10 |   4 |      5 |      3
+Anxiety            |      8 |       3 |       1 |    4 |   2 |      3 |      2
+Healthy            |      5 |       0 |       8 |    4 |   0 |      0 |      2
+Mood               |      9 |       8 |       1 |   23 |   0 |      6 |      8
+OCD                |      0 |       1 |       0 |    0 |   2 |      0 |      0
+Schiz.             |      3 |       1 |       1 |    7 |   0 |      5 |      5
+Trauma             |      4 |       4 |       5 |    5 |   1 |      4 |      6
+
+Accuracy: 0.291 (29.1%)
+

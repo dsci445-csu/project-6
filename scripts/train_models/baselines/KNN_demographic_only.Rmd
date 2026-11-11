@@ -45,4 +45,7 @@ class_metrics <- metric_set(accuracy, sens, spec)
 
 test_results |>
   class_metrics(truth = main.disorder, estimate = .pred_class)
+
+writeLines(capture.output({ print(test_results |> conf_mat(truth = main.disorder, estimate = .pred_class)); print(test_results |> metrics(truth = main.disorder, estimate = .pred_class)) }), "KNN_demographic_only_results.txt")
+
 ```
